@@ -31,7 +31,15 @@ export const site = {
   hero: {
     headline: "Sehat, Kuat, dan Lebih Percaya Diri.",
     subcopy: "Wellness Gym hadir untuk kamu yang ingin mulai berolahraga, membangun kekuatan, menjaga kebugaran, atau mengikuti kelas dalam lingkungan yang nyaman.",
-    location: "Purwokerto Utara · Jl. Jatisari No.24"
+    location: "Purwokerto Utara · Jl. Jatisari No.24",
+    image: "assets/gym-floor-1122.webp",
+    imageSmall: "assets/gym-floor-640.webp",
+    imageAlt: "Area latihan Wellness Gym dengan alat beban hitam-ungu dan lampu LED kuning di plafon"
+  },
+  // Real photo of an instructor (gym instructor, not PT) coaching a member. Build uses it only if the file exists.
+  instructorPhoto: {
+    candidates: ["assets/gym-instructor.webp", "assets/gym-instructor.jpg", "assets/gym-instructor.jpeg", "assets/gym-instructor.png"],
+    alt: "Instruktur Wellness Gym mendampingi member berlatih di mesin cable"
   },
 
   quickInfo: [
@@ -69,14 +77,14 @@ export const site = {
     waMessage: "Halo Wellness Gym, saya ingin mencoba visit gym. Boleh info ketentuannya?"
   },
 
-  // image: set to a real photo path (e.g. "assets/facility-wifi.webp") to replace the placeholder.
+  // icon = looping motion graphic for facilities without a real photo yet.
   facilities: [
-    { name: "Free WiFi", image: "" },
-    { name: "Free Instruktur Gym", image: "" },
-    { name: "Tersedia Personal Trainer", image: "" },
-    { name: "Shower", image: "" },
-    { name: "Locker", image: "" },
-    { name: "Gym Equipment", image: "" }
+    { name: "Gym Equipment", photo: "floor" },
+    { name: "Free Instruktur Gym", photo: "instructor", icon: "coach" },
+    { name: "Free WiFi", icon: "wifi" },
+    { name: "Tersedia Personal Trainer", icon: "pt" },
+    { name: "Shower", icon: "shower" },
+    { name: "Locker", icon: "locker" }
   ],
 
   classes: [
