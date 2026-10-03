@@ -302,6 +302,16 @@
         .from(item.querySelector("h3"), { y: 20, opacity: 0, duration: .8, ease: expo }, "<.4");
     });
 
+    /* ---------- Home teasers ---------- */
+    $$(".ft__item").forEach(function (item, i) {
+      gsap.timeline({ scrollTrigger: { trigger: item, start: "top 88%" } })
+        .from(item, { clipPath: "inset(100% 0% 0% 0%)", duration: 1.2, ease: "expo.inOut", delay: (i % 2) * .08 })
+        .from(item.querySelector("img"), { scale: 1.3, duration: 1.6, ease: expo }, "<.2")
+        .from(item.querySelector(".ft__label"), { y: 16, opacity: 0, duration: .8, ease: expo }, "<.4");
+    });
+    from(".ptt", { y: 50, opacity: 0, duration: 1.1, ease: expo, scrollTrigger: { trigger: ".ptt", start: "top 85%" } });
+    from(".teaser__lead", { y: 24, opacity: 0, duration: 1, ease: expo, scrollTrigger: { trigger: ".teaser__lead", start: "top 90%" } });
+
     /* ---------- Classes banner: reveal + parallax ---------- */
     from(".classes__banner", {
       clipPath: "inset(0% 50% 0% 50%)", duration: 1.4, ease: "expo.inOut",

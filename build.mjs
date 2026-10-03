@@ -106,7 +106,7 @@ const faqsFor = (key) => faqs.filter((f) => f.tags.includes(key));
 
 // ---------- Section renderers ----------
 // o.h: show the visible heading; o.more: link to the dedicated page (home only)
-const more = (href) => `<a class="more" href="${u(href)}">Selengkapnya</a>`;
+const more = (href, label = "Selengkapnya") => `<a class="more" href="${u(href)}">${esc(label)}</a>`;
 function sectionHead(id, title, aside, o) {
   if (!o.h) return `<h2 class="sr-only" id="${id}-title">${title}</h2>`;
   return `<header class="sec__head">
@@ -206,17 +206,60 @@ const ptSec = (o) => `<section class="sec pt" id="personal-trainer" aria-labelle
   </div>
 </section>`;
 
+const reviewsUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${b.name} ${b.address}`);
+const stars = `<svg class="stars" viewBox="0 0 100 18" aria-hidden="true">${[0, 1, 2, 3, 4].map((i) => `<path transform="translate(${i * 20} 0)" d="M9 1l2.4 5.2 5.6.7-4.1 3.9 1 5.6L9 13.7 4.1 16.4l1-5.6L1 6.9l5.6-.7z"/>`).join("")}</svg>`;
 const reviewsSec = () => `<section class="sec reviews" id="reviews" aria-labelledby="reviews-title">
-  <header class="reviews__head">
-    <h2 class="sr-only" id="reviews-title">Ulasan Google</h2>
-    <p class="rating"><span class="rating__n" data-count="${b.rating}" data-decimals="1">${b.rating}</span><span class="rating__meta">${esc(site.socialProof.rating)}</span></p>
-  </header>
+  <h2 class="sr-only" id="reviews-title">Ulasan Google</h2>
+  <div class="rev__head">
+    <div class="rev__score">${stars}<p class="rev__rating"><span class="num" data-count="${b.rating}" data-decimals="1">${b.rating}</span>/5 dari ${b.reviewCount} Google Reviews</p></div>
+    <a class="more" href="${esc(reviewsUrl)}" ${ext}>Lihat semua ulasan</a>
+  </div>
   <ul class="wall">
     ${site.socialProof.testimonials.map((t, i) => `<li class="wall__item wall__item--${i}">
       <blockquote><p>&ldquo;${esc(t.text)}&rdquo;</p></blockquote>
       <p class="wall__by">${esc(t.name)} <span>Google Review</span></p>
     </li>`).join("\n    ")}
   </ul>
+</section>`;
+
+// ---------- Home teasers: short, scannable, each links to its own page ----------
+const H = site.home;
+if (H.pt.price !== t0.rows[0].prices[0] || H.pt.per !== t0.cols[0].toLowerCase()) throw new Error("Home PT teaser price drifted from PT data");
+const ptTeaser = () => `<section class="sec pt-teaser" id="personal-trainer" aria-labelledby="pt-title">
+  ${sectionHead("pt", "Personal Trainer", more("personal-trainer/", "Lihat Paket PT"), { h: true })}
+  <div class="ptt">
+    <p class="ptt__lead">${esc(H.pt.lead)}</p>
+    <div class="ptt__body">
+      <p class="ptt__price">Mulai <span class="num">${esc(H.pt.price)}</span> / ${esc(H.pt.per)}</p>
+      <p class="ptt__points">${H.pt.points.map(esc).join(" · ")}</p>
+      <div class="ptt__cta">
+        ${btn(u("personal-trainer/"), "Lihat Paket PT", "gold")}
+        ${btn(site.ptBookingUrl, "Booking PT", "line", ext + ' data-cursor="Booking"')}
+      </div>
+    </div>
+  </div>
+</section>`;
+
+const facilitiesTeaser = () => `<section class="sec" id="facilities" aria-labelledby="facilities-title">
+  ${sectionHead("facilities", "Fasilitas", more("fasilitas/", "Lihat Semua Fasilitas"), { h: true })}
+  <p class="teaser__lead">${esc(H.facilities.lead)}</p>
+  <ul class="ft">
+    ${H.facilities.tiles.map((t, i) => `<li class="ft__item ft__item--${"abcd"[i]}" data-spot>
+      ${photo(t.photo, "ft__img", i === 0 ? "(max-width: 767px) 100vw, 50vw" : "(max-width: 767px) 50vw, 25vw", false, t.pos)}
+      <span class="ft__label">${esc(t.label)}</span>
+    </li>`).join("\n    ")}
+  </ul>
+  <p class="teaser__caption">${esc(H.facilities.caption)}</p>
+</section>`;
+
+const classesTeaser = () => `<section class="sec" id="classes" aria-labelledby="classes-title">
+  ${sectionHead("classes", "Kelas", more("kelas/", "Lihat Kelas"), { h: true })}
+  <p class="teaser__lead">${esc(H.classes.lead)}</p>
+  <figure class="classes__banner">${photo(site.classesPhoto, "classes__img", "(max-width: 767px) 100vw, 88rem")}</figure>
+  <div class="teaser__foot">
+    <p class="note">${esc(H.classes.note)}</p>
+    ${waBtn(site.scheduleWaMessage, "Tanya Jadwal", "line")}
+  </div>
 </section>`;
 
 const locationSec = (o) => `<section class="sec loc" id="location" aria-labelledby="location-title">
@@ -511,15 +554,11 @@ const homeBody = () => `<section class="hero" id="top" aria-labelledby="hero-tit
 
 ${membershipSec({ h: true, more: "membership/" })}
 
-${facilitiesSec({ h: true, more: "fasilitas/" })}
+${facilitiesTeaser()}
 
-${ribbonSec()}
+${classesTeaser()}
 
-${classesSec({ h: true, more: "kelas/" })}
-
-${scheduleSec({ h: true })}
-
-${ptSec({ h: true, more: "personal-trainer/" })}
+${ptTeaser()}
 
 ${reviewsSec()}
 
@@ -708,18 +747,22 @@ HOME = true; REL = "";
 const all = Object.values(out).join("\n");
 
 // Self-check: every business value from data must land in the output, links must be well-formed.
-const must = [
+const homeMust = [
   site.hero.headline.split(" ").pop(),
   ...site.quickInfo.flatMap((q) => [q.value, q.label]),
   ...m.single.flatMap((x) => [x.oneMonth, x.threeMonth]),
   ...m.couple.map((c) => c.price), site.visitGym.price,
-  ...site.classes.map((c) => c.price),
-  ...site.schedule.flatMap((s) => [s.time, s.cls]),
-  ...ptTiers.flatMap((t) => t.rows.flatMap((r) => r.prices)),
+  H.pt.price, H.classes.note,
   ...site.socialProof.testimonials.map((t) => t.text), site.finalCta.contact
 ].map(esc);
-const missing = must.filter((s) => !out.home.includes(s));
-if (missing.length) throw new Error("Missing on home: " + missing.join(" | "));
+const allMust = [
+  ...site.classes.map((c) => c.price),
+  ...site.schedule.flatMap((x) => [x.time, x.cls]),
+  ...ptTiers.flatMap((t) => t.rows.flatMap((r) => r.prices))
+].map(esc);
+const must = [...homeMust, ...allMust];
+const missing = [...homeMust.filter((x) => !out.home.includes(x)), ...allMust.filter((x) => !all.includes(x))];
+if (missing.length) throw new Error("Missing in output: " + missing.join(" | "));
 for (const mm of all.matchAll(/href="(https:\/\/wa\.me[^"]*)"/g)) {
   if (!mm[1].startsWith(`https://wa.me/${b.whatsappNumber}?text=`)) throw new Error("Bad WA link: " + mm[1]);
 }

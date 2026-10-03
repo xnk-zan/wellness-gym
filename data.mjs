@@ -47,6 +47,29 @@ export const site = {
     senam: { src: "assets/senam.webp", small: "assets/senam-640.webp", w: 1400, h: 788, alt: "Foto bersama peserta kelas senam di studio Wellness Gym" }
   },
 
+  // Short home-page teasers; the full versions live on their own pages.
+  home: {
+    pt: {
+      lead: "Latihan dengan pendampingan yang disesuaikan dengan tujuanmu.",
+      price: "Rp250.000", per: "4 sesi",
+      points: ["Pendampingan", "Program latihan", "Tracking progres"]
+    },
+    facilities: {
+      lead: "Semua yang kamu butuhkan untuk latihan.",
+      caption: "Area latihan · Dumbbell · Cardio · Locker · Studio",
+      tiles: [
+        { photo: "floor", label: "Area latihan", pos: "50% 82%" },
+        { photo: "dumbbell", label: "Dumbbell" },
+        { photo: "treadmill", label: "Cardio" },
+        { photo: "locker", label: "Locker" }
+      ]
+    },
+    classes: {
+      lead: "Ikuti berbagai kelas olahraga bersama instruktur Wellness Gym.",
+      note: "Jadwal dapat berubah. Hubungi kami untuk jadwal terbaru."
+    }
+  },
+
   quickInfo: [
     { value: "Rp25.000", label: "Visit Gym" },
     { value: "Mulai Rp100.000", label: "Membership Mahasiswa" },
