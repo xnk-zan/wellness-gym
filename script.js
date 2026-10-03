@@ -262,7 +262,7 @@
     $$(".fac__item").forEach(function (item, i) {
       var tl = gsap.timeline({ scrollTrigger: { trigger: item, start: "top 88%" } });
       tl.from(item, { clipPath: "inset(100% 0% 0% 0%)", duration: 1.2, ease: "expo.inOut", delay: (i % 2) * .08 })
-        .from(item.querySelectorAll(".fac__img, .mg"), { scale: 1.35, duration: 1.6, ease: expo }, "<.2")
+        .from(item.querySelector(".fac__media"), { scale: 1.35, duration: 1.6, ease: expo }, "<.2")
         .from(item.querySelector("h3"), { y: 20, opacity: 0, duration: .8, ease: expo }, "<.4");
     });
 

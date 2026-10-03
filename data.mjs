@@ -82,10 +82,10 @@ export const site = {
     waMessage: "Halo Wellness Gym, saya ingin mencoba visit gym. Boleh info ketentuannya?"
   },
 
-  // photo = key in `photos`; icon = looping motion graphic where no real photo exists yet.
+  // photo = key in `photos` (pos = crop focal point for this tile); icon = looping motion graphic where no real photo exists yet.
   facilities: [
-    { name: "Gym Equipment", photo: "floor" },
-    { name: "Free Instruktur Gym", photo: "instructor" },
+    { name: "Gym Equipment", photo: "floor", pos: "50% 88%" },
+    { name: "Free Instruktur Gym", photo: "instructor", pos: "50% 80%" },
     { name: "Locker", photo: "locker" },
     { name: "Free WiFi", icon: "wifi" },
     { name: "Shower", icon: "shower" },

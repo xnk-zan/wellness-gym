@@ -232,7 +232,7 @@ body.menu-open .nav { z-index: calc(var(--z-menu) + 1); }
 .fac__item { position: relative; overflow: hidden; border-radius: 4px; background: var(--bg-2); display: flex; flex-direction: column; justify-content: flex-end; min-height: 15rem; isolation: isolate; }
 .fac__item--big { grid-column: span 2; grid-row: span 2; min-height: 32rem; }
 .fac__media { position: absolute; inset: 0; z-index: -1; display: grid; place-items: center; }
-.fac__img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease); }
+.fac__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease); }
 .fac__item:hover .fac__img { transform: scale(1.06); }
 .fac__item:has(.fac__img)::before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, transparent 50%, rgba(13, 11, 18, .92)); }
 .why__body, .fac__item h3 { text-shadow: 0 1px 12px rgba(13, 11, 18, .6); }

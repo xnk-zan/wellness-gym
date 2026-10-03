@@ -28,12 +28,12 @@ const icons = {
   locker: `<svg viewBox="0 0 120 120" class="mg mg--locker"><rect x="30" y="14" width="60" height="92" rx="4"/><g class="mg-door"><rect x="30" y="14" width="60" height="92" rx="4"/><path d="M44 30h32M44 38h32M44 46h32"/><circle cx="78" cy="66" r="4"/></g></svg>`
 };
 
-const photo = (key, cls, sizes = "(max-width: 767px) 100vw, 50vw", eager = false) => {
-  const p = P[key];
+const photo = (key, cls, sizes = "(max-width: 767px) 100vw, 50vw", eager = false, pos) => {
+  const p = { ...P[key], ...(pos && { pos }) };
   return `<img class="${cls}" src="${esc(p.src)}" srcset="${esc(p.small)} 640w, ${esc(p.src)} ${p.w}w" sizes="${sizes}" alt="${esc(p.alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="${p.w}" height="${p.h}"${p.pos ? ` style="object-position:${p.pos}"` : ""}>`;
 };
 
-const facilityMedia = (f) => f.photo ? photo(f.photo, "fac__img")
+const facilityMedia = (f) => f.photo ? photo(f.photo, "fac__img", undefined, false, f.pos)
   : `<div class="fac__mg" aria-hidden="true">${icons[f.icon]}</div>`;
 const heroP = P[site.hero.photo];
 
