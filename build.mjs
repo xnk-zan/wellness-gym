@@ -9,7 +9,7 @@ const esc = (s) => String(s)
 const ext = `target="_blank" rel="noopener"`;
 const b = site.brand;
 const days = [...new Set(site.schedule.map((s) => s.day))];
-const instructorSrc = site.instructorPhoto.candidates.find((p) => existsSync(here(p)));
+const P = site.photos;
 
 const logo = (cls, w = 40, alt = "Wellness Gym") => `<picture><source srcset="logo-320.webp" type="image/webp"><img class="${cls}" src="logo-320.png" alt="${alt}" width="${w}" height="${w}"></picture>`;
 const arrow = `<svg class="ico-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M8 5h11v11"/></svg>`;
@@ -28,14 +28,14 @@ const icons = {
   locker: `<svg viewBox="0 0 120 120" class="mg mg--locker"><rect x="30" y="14" width="60" height="92" rx="4"/><g class="mg-door"><rect x="30" y="14" width="60" height="92" rx="4"/><path d="M44 30h32M44 38h32M44 46h32"/><circle cx="78" cy="66" r="4"/></g></svg>`
 };
 
-const photo = (src, small, alt, cls, eager = false) =>
-  `<img class="${cls}" src="${esc(src)}"${small ? ` srcset="${esc(small)} 640w, ${esc(src)} 1122w" sizes="(max-width: 767px) 100vw, 60vw"` : ""} alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="1122" height="1402">`;
-
-const facilityMedia = (f) => {
-  if (f.photo === "floor") return photo(site.hero.image, site.hero.imageSmall, site.hero.imageAlt, "fac__img");
-  if (f.photo === "instructor" && instructorSrc) return photo(instructorSrc, "", site.instructorPhoto.alt, "fac__img");
-  return `<div class="fac__mg" aria-hidden="true">${icons[f.icon]}</div>`;
+const photo = (key, cls, sizes = "(max-width: 767px) 100vw, 50vw", eager = false) => {
+  const p = P[key];
+  return `<img class="${cls}" src="${esc(p.src)}" srcset="${esc(p.small)} 640w, ${esc(p.src)} ${p.w}w" sizes="${sizes}" alt="${esc(p.alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="${p.w}" height="${p.h}"${p.pos ? ` style="object-position:${p.pos}"` : ""}>`;
 };
+
+const facilityMedia = (f) => f.photo ? photo(f.photo, "fac__img")
+  : `<div class="fac__mg" aria-hidden="true">${icons[f.icon]}</div>`;
+const heroP = P[site.hero.photo];
 
 const nav = [
   ["#membership", "Membership"],
@@ -62,7 +62,7 @@ const jsonLd = {
   name: b.name,
   slogan: b.tagline,
   url: site.url,
-  image: [site.url + site.hero.image, site.url + "og-image.png"],
+  image: [site.url + heroP.src, site.url + "og-image.png"],
   logo: site.url + "logo.png",
   telephone: b.telephone,
   address: {
@@ -113,7 +113,7 @@ const html = `<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
-<link rel="preload" as="image" href="${site.hero.image}" imagesrcset="${site.hero.imageSmall} 640w, ${site.hero.image} 1122w" imagesizes="100vw">
+<link rel="preload" as="image" href="${heroP.src}" imagesrcset="${heroP.small} 640w, ${heroP.src} ${heroP.w}w" imagesizes="100vw">
 <link rel="stylesheet" href="styles.css">
 <script>
   // Motion only arms when JS runs; if scripts fail to load, everything stays visible.
@@ -151,7 +151,7 @@ const html = `<!DOCTYPE html>
 
 <section class="hero" id="top" aria-labelledby="hero-title">
   <div class="hero__frame">
-    ${photo(site.hero.image, site.hero.imageSmall, site.hero.imageAlt, "hero__img", true)}
+    ${photo(site.hero.photo, "hero__img", "100vw", true)}
     <div class="hero__shade" aria-hidden="true"></div>
     <svg class="led" viewBox="0 0 1440 400" preserveAspectRatio="none" aria-hidden="true">
       <path class="led__path" d="M-20 120 L380 160 L520 60 L1460 40"/>
@@ -188,9 +188,7 @@ const html = `<!DOCTYPE html>
     <h2 class="why__title" id="why-title" data-scrub>${esc(site.whyUs.headline)}</h2>
     <ol class="why__track">
       ${site.whyUs.points.map((p, i) => {
-        const media = i === 1 ? photo(site.hero.image, site.hero.imageSmall, site.hero.imageAlt, "why__img")
-          : i === 3 && instructorSrc ? photo(instructorSrc, "", site.instructorPhoto.alt, "why__img")
-          : "";
+        const media = site.whyPhotos[i] ? photo(site.whyPhotos[i], "why__img") : "";
         const mg = media ? "" : `<div class="why__mg" aria-hidden="true">${icons[["breath", "", "orbit", "coach"][i]]}</div>`;
         return `<li class="why__card${media ? " why__card--photo" : ""}">${media}${mg}<div class="why__body"><span class="why__n" aria-hidden="true">0${i + 1}</span><h3>${esc(p.title)}</h3><p>${esc(p.desc)}</p></div></li>`;
       }).join("\n      ")}
@@ -236,11 +234,18 @@ const html = `<!DOCTYPE html>
   </ul>
 </section>
 
+<div class="ribbon" aria-label="Galeri foto Wellness Gym">
+  <ul class="ribbon__track">
+    ${site.ribbon.map((k, i) => `<li class="ribbon__item ribbon__item--${P[k].h > P[k].w ? "tall" : "wide"}">${photo(k, "ribbon__img", "(max-width: 767px) 70vw, 32vw")}</li>`).join("\n    ")}
+  </ul>
+</div>
+
 <section class="sec" id="classes" aria-labelledby="classes-title">
   <header class="sec__head">
     <h2 class="sec__title" data-split id="classes-title">Kelas</h2>
     ${waBtn(site.scheduleWaMessage, "Tanya Jadwal", "line")}
   </header>
+  <figure class="classes__banner">${photo(site.classesPhoto, "classes__img", "(max-width: 767px) 100vw, 88rem")}</figure>
   <ul class="classes">
     ${site.classes.map((c) => `<li class="class-row">
       <h3>${esc(c.name)}</h3>
@@ -327,7 +332,7 @@ const html = `<!DOCTYPE html>
 </section>
 
 <section class="final" id="mulai" aria-labelledby="final-title">
-  <h2 class="final__title" id="final-title"><span class="final__a">Sudah siap</span> <span class="final__mask" style="--img:url('${site.hero.image}')">mulai latihan?</span></h2>
+  <h2 class="final__title" id="final-title"><span class="final__a">Sudah siap</span> <span class="final__mask" style="--img:url('${heroP.src}')">mulai latihan?</span></h2>
   <p class="final__copy">${esc(site.finalCta.copy)}</p>
   <div class="hero__ctas">
     ${waBtn(site.waGeneralMessage)}
@@ -382,4 +387,4 @@ if (!html.includes(`href="${site.ptBookingUrl}"`)) throw new Error("PT booking l
 for (const m of html.matchAll(/src="(assets\/[^"]+)"/g)) if (!existsSync(here(m[1]))) throw new Error("Missing asset: " + m[1]);
 
 writeFileSync(here("index.html"), html);
-console.log("index.html written,", html.length, "bytes,", must.length, "values verified,", instructorSrc ? "instructor photo: " + instructorSrc : "instructor photo: not found (placeholder used)");
+console.log("index.html written,", html.length, "bytes,", must.length, "values verified,");

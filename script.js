@@ -196,12 +196,23 @@
       var both = track.parentElement.children;
       return gsap.fromTo(both, { xPercent: i ? -100 : 0 }, { xPercent: i ? 0 : -100, duration: 28 + i * 6, ease: "none", repeat: -1 });
     });
+    // Photo ribbon joins the same velocity-driven loop
+    var ribbon = $(".ribbon");
+    var rTrack = $(".ribbon__track");
+    ribbon.classList.add("is-looping");
+    ribbon.scrollLeft = 0;
+    ribbon.appendChild(rTrack.cloneNode(true)).setAttribute("aria-hidden", "true");
+    loops.push(gsap.fromTo(ribbon.children, { xPercent: 0 }, { xPercent: -100, duration: 45, ease: "none", repeat: -1 }));
+    var skew = gsap.quickTo(".ribbon__item", "skewX", { duration: .5, ease: "power3.out" });
+
     var boost = { v: 1 };
     ScrollTrigger.create({
       start: 0, end: "max",
       onUpdate: function (self) {
         var v = gsap.utils.clamp(-6, 6, self.getVelocity() / 300);
         var dir = self.direction;
+        skew(gsap.utils.clamp(-8, 8, -v * 2));
+        gsap.delayedCall(.3, function () { skew(0); });
         gsap.to(boost, {
           v: (Math.abs(v) + 1) * dir, duration: .25, overwrite: true,
           onUpdate: function () { loops.forEach(function (l) { l.timeScale(boost.v); }); }
@@ -253,6 +264,16 @@
       tl.from(item, { clipPath: "inset(100% 0% 0% 0%)", duration: 1.2, ease: "expo.inOut", delay: (i % 2) * .08 })
         .from(item.querySelectorAll(".fac__img, .mg"), { scale: 1.35, duration: 1.6, ease: expo }, "<.2")
         .from(item.querySelector("h3"), { y: 20, opacity: 0, duration: .8, ease: expo }, "<.4");
+    });
+
+    /* ---------- Classes banner: reveal + parallax ---------- */
+    gsap.from(".classes__banner", {
+      clipPath: "inset(0% 50% 0% 50%)", duration: 1.4, ease: "expo.inOut",
+      scrollTrigger: { trigger: ".classes__banner", start: "top 85%" }
+    });
+    gsap.fromTo(".classes__img", { yPercent: -15 }, {
+      yPercent: 0, ease: "none",
+      scrollTrigger: { trigger: ".classes__banner", start: "top bottom", end: "bottom top", scrub: true }
     });
 
     /* ---------- Classes rows ---------- */

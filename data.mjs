@@ -32,14 +32,19 @@ export const site = {
     headline: "Sehat, Kuat, dan Lebih Percaya Diri.",
     subcopy: "Wellness Gym hadir untuk kamu yang ingin mulai berolahraga, membangun kekuatan, menjaga kebugaran, atau mengikuti kelas dalam lingkungan yang nyaman.",
     location: "Purwokerto Utara · Jl. Jatisari No.24",
-    image: "assets/gym-floor-1122.webp",
-    imageSmall: "assets/gym-floor-640.webp",
-    imageAlt: "Area latihan Wellness Gym dengan alat beban hitam-ungu dan lampu LED kuning di plafon"
+    photo: "floor"
   },
-  // Real photo of an instructor (gym instructor, not PT) coaching a member. Build uses it only if the file exists.
-  instructorPhoto: {
-    candidates: ["assets/gym-instructor.webp", "assets/gym-instructor.jpg", "assets/gym-instructor.jpeg", "assets/gym-instructor.png"],
-    alt: "Instruktur Wellness Gym mendampingi member berlatih di mesin cable"
+  // Real Wellness Gym photos. Instructor shots = gym instructors (free), never used for the PT section.
+  photos: {
+    floor: { src: "assets/gym-floor-1122.webp", small: "assets/gym-floor-640.webp", w: 1122, h: 1402, alt: "Area latihan Wellness Gym dengan alat beban hitam-ungu dan lampu LED kuning di plafon" },
+    instructor: { src: "assets/gym-instructor.webp", small: "assets/gym-instructor-640.webp", w: 950, h: 1400, pos: "50% 62%", alt: "Instruktur Wellness Gym mendampingi member berlatih di mesin cable" },
+    instructor2: { src: "assets/instructor-2.webp", small: "assets/instructor-2-640.webp", w: 1400, h: 897, alt: "Instruktur gym mengarahkan teknik member saat latihan cable row" },
+    dumbbell: { src: "assets/dumbbell.webp", small: "assets/dumbbell-640.webp", w: 1400, h: 788, alt: "Rak dumbbell dan kettlebell di Wellness Gym" },
+    treadmill: { src: "assets/treadmill.webp", small: "assets/treadmill-640.webp", w: 1400, h: 788, alt: "Dua treadmill di area kardio Wellness Gym" },
+    locker: { src: "assets/locker.webp", small: "assets/locker-640.webp", w: 1400, h: 788, alt: "Deretan locker di lobi Wellness Gym" },
+    lobby: { src: "assets/lobby.webp", small: "assets/lobby-640.webp", w: 788, h: 1400, pos: "50% 30%", alt: "Sudut lobi Wellness Gym yang bersih dengan locker dan tanaman" },
+    aerobic: { src: "assets/aerobic.webp", small: "assets/aerobic-640.webp", w: 1400, h: 788, alt: "Member mengikuti sesi kelas aerobic di studio Wellness Gym" },
+    senam: { src: "assets/senam.webp", small: "assets/senam-640.webp", w: 1400, h: 788, alt: "Foto bersama peserta kelas senam di studio Wellness Gym" }
   },
 
   quickInfo: [
@@ -77,15 +82,20 @@ export const site = {
     waMessage: "Halo Wellness Gym, saya ingin mencoba visit gym. Boleh info ketentuannya?"
   },
 
-  // icon = looping motion graphic for facilities without a real photo yet.
+  // photo = key in `photos`; icon = looping motion graphic where no real photo exists yet.
   facilities: [
     { name: "Gym Equipment", photo: "floor" },
-    { name: "Free Instruktur Gym", photo: "instructor", icon: "coach" },
+    { name: "Free Instruktur Gym", photo: "instructor" },
+    { name: "Locker", photo: "locker" },
     { name: "Free WiFi", icon: "wifi" },
-    { name: "Tersedia Personal Trainer", icon: "pt" },
     { name: "Shower", icon: "shower" },
-    { name: "Locker", icon: "locker" }
+    { name: "Tersedia Personal Trainer", icon: "pt" }
   ],
+  // Why-us cards, same order as whyUs.points
+  whyPhotos: ["lobby", "dumbbell", "aerobic", "instructor2"],
+  // Looping photo ribbon
+  ribbon: ["treadmill", "senam", "dumbbell", "instructor2", "locker", "aerobic", "floor"],
+  classesPhoto: "senam",
 
   classes: [
     { name: "Aerobic / BL Power", price: "Rp15.000 / kedatangan" },
