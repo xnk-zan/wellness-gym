@@ -364,9 +364,9 @@ const html = `<!DOCTYPE html>
 
 <section class="sec faq" id="faq" aria-labelledby="faq-title">
   <header class="sec__head"><h2 class="sec__title" data-split id="faq-title">Pertanyaan umum</h2></header>
-  <dl class="faq__list">
-    ${faqs.map(([q, a]) => `<div class="faq__item"><dt><h3>${esc(q)}</h3></dt><dd>${esc(a)}</dd></div>`).join("\n    ")}
-  </dl>
+  <div class="faq__list">
+    ${faqs.map(([q, a], i) => `<details class="faq__item"${i === 0 ? " open" : ""}><summary><h3>${esc(q)}</h3><span class="faq__icon" aria-hidden="true"></span></summary><p>${esc(a)}</p></details>`).join("\n    ")}
+  </div>
 </section>
 
 <section class="sec loc" id="location" aria-labelledby="location-title">

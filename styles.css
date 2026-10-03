@@ -479,9 +479,26 @@ address { font-style: normal; max-width: 26rem; }
 @media (max-width: 600px) { .classes__banner { aspect-ratio: 4 / 3; } }
 
 
-/* ---------- FAQ ---------- */
+/* ---------- FAQ accordion (native details: works without JS, fully crawlable) ---------- */
+:root { interpolate-size: allow-keywords; }
 .faq__list { border-top: 1px solid var(--line); }
-.faq__item { display: grid; grid-template-columns: 5fr 7fr; gap: 1rem clamp(1.5rem, 5vw, 5rem); padding: clamp(1.5rem, 3vw, 2.5rem) 0; border-bottom: 1px solid var(--line); }
-.faq__item h3 { font: 600 clamp(1.3rem, 2.3vw, 2rem)/1.1 var(--display); letter-spacing: -.025em; text-wrap: balance; }
-.faq__item dd { color: var(--muted); max-width: 62ch; text-wrap: pretty; }
-@media (max-width: 760px) { .faq__item { grid-template-columns: 1fr; } }
+.faq__item { border-bottom: 1px solid var(--line); }
+.faq__item summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 2rem;
+  padding: clamp(1.25rem, 2.6vw, 2.25rem) 0; min-height: 44px;
+}
+.faq__item summary::-webkit-details-marker { display: none; }
+.faq__item h3 { font: 600 clamp(1.25rem, 2.4vw, 2.1rem)/1.1 var(--display); letter-spacing: -.025em; text-wrap: balance; transition: color .3s; }
+.faq__item summary:hover h3, .faq__item[open] h3 { color: var(--led); }
+.faq__icon { position: relative; flex: 0 0 auto; width: 44px; height: 44px; border: 1px solid var(--line-2); border-radius: 50%; transition: background-color .3s, border-color .3s, transform .5s var(--ease); }
+.faq__icon::before, .faq__icon::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 1.5px; margin: -.75px 0 0 -7px; background: var(--cream); transition: transform .5s var(--ease), background-color .3s; }
+.faq__icon::after { transform: rotate(90deg); }
+.faq__item summary:hover .faq__icon { border-color: var(--led); }
+.faq__item[open] .faq__icon { background: var(--led); border-color: var(--led); transform: rotate(180deg); }
+.faq__item[open] .faq__icon::before, .faq__item[open] .faq__icon::after { background: #17120a; }
+.faq__item[open] .faq__icon::after { transform: rotate(0); }
+.faq__item p { color: var(--muted); max-width: 66ch; padding: 0 clamp(0rem, 6vw, 5rem) clamp(1.5rem, 3vw, 2.5rem) 0; text-wrap: pretty; }
+@supports selector(::details-content) {
+  .faq__item::details-content { block-size: 0; overflow: clip; transition: block-size .5s var(--ease), content-visibility .5s allow-discrete; }
+  .faq__item[open]::details-content { block-size: auto; }
+}
