@@ -8,7 +8,6 @@ Wellness Gym (Health · Strength · Balance) adalah gym di Purwokerto Utara, Kab
 - [Beranda](https://xnk-zan.github.io/wellness-gym/): Ringkasan gym, harga, jadwal, dan lokasi
 - [Membership](https://xnk-zan.github.io/wellness-gym/membership/): General, Student, Couple, dan visit gym Rp25.000 / visit
 - [Kelas](https://xnk-zan.github.io/wellness-gym/kelas/): Aerobic, BL Power, BL Twerking, Zumba, Yoga dan jadwal mingguan
-- [Personal Trainer](https://xnk-zan.github.io/wellness-gym/personal-trainer/): Paket Entry, Core, Premium, booking online
 - [Fasilitas](https://xnk-zan.github.io/wellness-gym/fasilitas/): Gym Equipment, Instruktur Gym, Locker, WiFi, Shower, Personal Trainer
 - [Lokasi](https://xnk-zan.github.io/wellness-gym/lokasi/): Jl. Jatisari No.24, Purwokerto Utara. Senin–Sabtu 06.00–21.00, Minggu 06.00–12.00
 - [Tips](https://xnk-zan.github.io/wellness-gym/tips/): Ringkasan jurnal ilmiah tentang latihan beban, protein, dan kesehatan mental

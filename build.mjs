@@ -1,6 +1,6 @@
 // Zero-dependency static build: renders every page from data.mjs.
 // Usage: node build.mjs
-// Pages: / , /membership/ , /kelas/ , /personal-trainer/ , /fasilitas/ , /lokasi/ , /faq/
+// Pages: / , /membership/ , /kelas/ , /fasilitas/ , /lokasi/ , /tips/ , /faq/ (Personal Trainer lives on ptBookingUrl)
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { site, waLink } from "./data.mjs";
 import { references, articles, events, contentDate } from "./content.mjs";
@@ -77,7 +77,7 @@ const t0 = ptTiers[0];
 const faqs = [
   { tags: ["membership", "faq"], q: "Berapa harga membership Wellness Gym Purwokerto?",
     a: `Membership General ${m.single[0].oneMonth} untuk 1 bulan dan ${m.single[0].threeMonth} untuk 3 bulan. Membership Student ${m.single[1].oneMonth} untuk 1 bulan dan ${m.single[1].threeMonth} untuk 3 bulan. Paket couple: ${m.couple.map((c) => `${c.type} ${c.price}`).join(" dan ")}.` },
-  { tags: ["membership", "personal-trainer", "faq"], q: "Apakah ada harga khusus mahasiswa?",
+  { tags: ["membership", "faq"], q: "Apakah ada harga khusus mahasiswa?",
     a: `Ada. Membership Student ${m.single[1].oneMonth} untuk 1 bulan dan ${m.single[1].threeMonth} untuk 3 bulan, paket ${m.couple[0].type} ${m.couple[0].price}, dan Personal Trainer segmen ${t0.rows[0].segment} mulai ${t0.rows[0].prices[0]} (${t0.name} ${t0.cols[0].toLowerCase()}).` },
   { tags: ["membership", "faq"], q: "Berapa harga visit gym harian?",
     a: `Visit gym ${site.visitGym.price}. ${site.visitGym.copy} Untuk ketentuan visit, tanyakan lewat WhatsApp ${b.whatsappDisplay}.` },
@@ -85,11 +85,11 @@ const faqs = [
     a: site.classes.map((c) => `${c.name} ${c.price}`).join("; ") + "." },
   { tags: ["kelas", "faq"], q: "Bagaimana jadwal kelas mingguan?",
     a: `${dayText}. ${site.scheduleNote}` },
-  { tags: ["personal-trainer", "faq"], q: "Apakah ada Personal Trainer di Wellness Gym?",
+  { tags: ["faq"], q: "Apakah ada Personal Trainer di Wellness Gym?",
     a: `Ada. Paket ${ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()})`).join(", ")}, harga mulai ${idr(minPT)}. Tersedia untuk segmen ${t0.rows.map((r) => r.segment.toLowerCase()).join(" dan ")}.` },
-  { tags: ["personal-trainer", "faq"], q: "Bagaimana cara booking Personal Trainer?",
+  { tags: ["faq"], q: "Bagaimana cara booking Personal Trainer?",
     a: `Booking lewat ${site.ptBookingUrl.replace("https://", "")}. Untuk konsultasi paket yang sesuai, hubungi WhatsApp ${b.whatsappDisplay}.` },
-  { tags: ["personal-trainer", "faq"], q: "Apa beda paket Entry, Core, dan Premium?",
+  { tags: ["faq"], q: "Apa beda paket Entry, Core, dan Premium?",
     a: ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()}): ${t.includes.join(", ").toLowerCase()}`).join(". ") + "." },
   { tags: ["fasilitas", "faq"], q: "Fasilitas apa saja yang tersedia?",
     a: site.facilities.map((f) => f.name).join(", ") + "." },
@@ -178,34 +178,6 @@ const scheduleSec = (o) => `<section class="sec" id="schedule" aria-labelledby="
   <p class="note">${esc(site.scheduleNote)}</p>
 </section>`;
 
-const spin = () => `<a class="spin" href="${site.ptBookingUrl}" ${ext} data-cursor="Booking">
-      <svg viewBox="0 0 200 200" class="spin__ring" aria-hidden="true"><defs><path id="ring" d="M100 100m-76 0a76 76 0 1 1 152 0a76 76 0 1 1-152 0"/></defs><text><textPath href="#ring">Booking Personal Trainer · xnkbooking.my.id · </textPath></text></svg>
-      <span class="spin__core">${arrow}</span>
-      <span class="sr-only">Booking Personal Trainer di xnkbooking.my.id</span>
-    </a>`;
-
-const ptSec = (o) => `<section class="sec pt" id="personal-trainer" aria-labelledby="pt-title">
-  ${sectionHead("pt", "Personal Trainer", spin(), o)}
-  <div class="stack">
-    ${ptTiers.map((t, i) => `<article class="tier" style="--i:${i}">
-      <div class="tier__info">
-        <h3 class="tier__name">${esc(t.name)}</h3>
-        <p class="tier__sub">${esc(t.subtitle)}</p>
-        <ul class="tier__inc">${t.includes.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-      </div>
-      <table class="tier__table">
-        <caption class="sr-only">Harga ${esc(t.name)} — ${esc(t.subtitle)}</caption>
-        <thead><tr><th scope="col">Paket</th>${t.rows.map((r) => `<th scope="col">${esc(r.segment)}</th>`).join("")}</tr></thead>
-        <tbody>${t.cols.map((c, ci) => `<tr><th scope="row">${esc(c)}</th>${t.rows.map((r) => `<td class="num">${esc(r.prices[ci])}</td>`).join("")}</tr>`).join("")}</tbody>
-      </table>
-    </article>`).join("\n    ")}
-  </div>
-  <div class="pt__cta">
-    ${btn(site.ptBookingUrl, "Booking Personal Trainer", "gold", ext + ' data-cursor="Booking"')}
-    ${waBtn(site.personalTrainer.waMessage, "Konsultasi via WhatsApp", "line")}
-  </div>
-</section>`;
-
 const reviewsUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${b.name} ${b.address}`);
 const stars = `<svg class="stars" viewBox="0 0 100 18" aria-hidden="true">${[0, 1, 2, 3, 4].map((i) => `<path transform="translate(${i * 20} 0)" d="M9 1l2.4 5.2 5.6.7-4.1 3.9 1 5.6L9 13.7 4.1 16.4l1-5.6L1 6.9l5.6-.7z"/>`).join("")}</svg>`;
 const reviewsSec = () => `<section class="sec reviews" id="reviews" aria-labelledby="reviews-title">
@@ -226,15 +198,15 @@ const reviewsSec = () => `<section class="sec reviews" id="reviews" aria-labelle
 const H = site.home;
 if (H.pt.price !== t0.rows[0].prices[0] || H.pt.per !== t0.cols[0].toLowerCase()) throw new Error("Home PT teaser price drifted from PT data");
 const ptTeaser = () => `<section class="sec pt-teaser" id="personal-trainer" aria-labelledby="pt-title">
-  ${sectionHead("pt", "Personal Trainer", more("personal-trainer/", "Lihat Paket PT"), { h: true })}
+  ${sectionHead("pt", "Personal Trainer", `<a class="more" href="${site.ptBookingUrl}" ${ext}>Lihat Paket PT</a>`, { h: true })}
   <div class="ptt">
     <p class="ptt__lead">${esc(H.pt.lead)}</p>
     <div class="ptt__body">
       <p class="ptt__price">Mulai <span class="num">${esc(H.pt.price)}</span> / ${esc(H.pt.per)}</p>
       <p class="ptt__points">${H.pt.points.map(esc).join(" · ")}</p>
       <div class="ptt__cta">
-        ${btn(u("personal-trainer/"), "Lihat Paket PT", "gold")}
-        ${btn(site.ptBookingUrl, "Booking PT", "line", ext + ' data-cursor="Booking"')}
+        ${btn(site.ptBookingUrl, "Lihat Paket PT", "gold", ext + ' data-cursor="Booking"')}
+        ${waBtn(site.personalTrainer.waMessage, "Konsultasi via WhatsApp", "line")}
       </div>
     </div>
   </div>
@@ -313,7 +285,7 @@ const pages = [
     h1: "Membership gym di Purwokerto",
     intro: `Pilih membership General atau Student untuk 1 atau 3 bulan, atau paket couple. Belum yakin? Coba dulu lewat visit gym ${site.visitGym.price}.`,
     short: `General, Student, Couple, dan visit gym ${site.visitGym.price}`,
-    related: ["kelas", "personal-trainer", "lokasi"],
+    related: ["kelas", "fasilitas", "lokasi"],
     ctas: () => waBtn(m.waMessage, "Tanya Membership") + waBtn(site.visitGym.waMessage, "Coba Visit Gym", "line"),
     body: () => membershipSec({ h: false }) + faqSec("membership", "Pertanyaan tentang membership"),
     images: []
@@ -325,22 +297,10 @@ const pages = [
     h1: "Kelas & jadwal mingguan",
     intro: `Kelas ${classNames.join(", ")} dengan harga mulai ${idr(minClass)} per kedatangan. ${site.scheduleNote}`,
     short: `${classNames.join(", ")} dan jadwal mingguan`,
-    related: ["membership", "personal-trainer", "fasilitas"],
+    related: ["membership", "fasilitas", "lokasi"],
     ctas: () => waBtn(site.scheduleWaMessage, "Tanya Jadwal Terbaru") + btn(u("membership/"), "Lihat Membership", "line"),
     body: () => classesSec({ h: false }) + scheduleSec({ h: true }) + faqSec("kelas", "Pertanyaan tentang kelas"),
     images: ["classesPhoto"]
-  },
-  {
-    key: "personal-trainer", path: "personal-trainer/", nav: "Personal Trainer", crumb: "Personal Trainer",
-    title: "Personal Trainer Purwokerto | Paket Entry, Core, Premium",
-    desc: `Paket Personal Trainer Wellness Gym Purwokerto: Entry, Core, Premium untuk mahasiswa dan umum, mulai ${idr(minPT)}. Booking lewat xnkbooking.my.id.`,
-    h1: "Personal Trainer di Purwokerto",
-    intro: `Tiga paket: ${ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()})`).join(", ")}. Harga mulai ${idr(minPT)}. Booking lewat xnkbooking.my.id.`,
-    short: `Paket ${ptTiers.map((t) => t.name[0] + t.name.slice(1).toLowerCase()).join(", ")}, booking online`,
-    related: ["membership", "kelas", "faq"],
-    ctas: () => btn(site.ptBookingUrl, "Booking PT", "gold", ext + ' data-cursor="Booking"') + waBtn(site.personalTrainer.waMessage, "Konsultasi PT", "line"),
-    body: () => ptSec({ h: false }) + faqSec("personal-trainer", "Pertanyaan tentang Personal Trainer"),
-    images: []
   },
   {
     key: "fasilitas", path: "fasilitas/", nav: "Fasilitas", crumb: "Fasilitas",
@@ -374,7 +334,7 @@ const pages = [
     h1: "Pertanyaan umum",
     intro: "Jawaban singkat tentang harga, jadwal kelas, Personal Trainer, jam buka, dan lokasi. Tidak menemukan jawabannya? Tanya langsung lewat WhatsApp.",
     short: "Harga, jadwal, Personal Trainer, jam buka, lokasi",
-    related: ["membership", "kelas", "personal-trainer"],
+    related: ["membership", "kelas", "tips"],
     ctas: () => waBtn(site.waGeneralMessage, "Tanya via WhatsApp") + btn(u("membership/"), "Lihat Membership", "line"),
     body: () => faqSec("faq", "Semua pertanyaan", true),
     images: []
@@ -429,7 +389,7 @@ const tipsIndex = {
   h1: "Tips latihan berbasis penelitian",
   intro: "Ringkasan singkat dari jurnal ilmiah tentang latihan, nutrisi, dan kesehatan. Setiap artikel mencantumkan referensi dan DOI agar bisa kamu cek sendiri.",
   short: "Ringkasan jurnal ilmiah tentang latihan beban, protein, dan kesehatan mental",
-  related: ["membership", "personal-trainer", "kelas"],
+  related: ["membership", "kelas", "fasilitas"],
   ctas: () => waBtn(site.waGeneralMessage) + btn(u("membership/"), "Lihat Membership", "line"),
   body: () => `<section class="sec" aria-labelledby="tips-list-title">
   <h2 class="sr-only" id="tips-list-title">Daftar artikel</h2>
@@ -446,8 +406,8 @@ const articlePages = articles.map((a, i) => {
     title: a.title, desc: a.desc, h1: a.h1, intro: a.intro,
     meta: `Diperbarui ${fmtDate(contentDate)} · ${readMin(a)} menit baca · ${a.refs.length} referensi ilmiah`,
     short: a.desc, article: a, images: [],
-    related: [...tipKeys.filter((k) => k !== tipKeys[i]).slice(0, 2), "personal-trainer"],
-    ctas: () => waBtn(site.waGeneralMessage) + btn(u("personal-trainer/"), "Lihat Personal Trainer", "line")
+    related: [...tipKeys.filter((k) => k !== tipKeys[i]).slice(0, 2), "membership"],
+    ctas: () => waBtn(site.waGeneralMessage) + btn(site.ptBookingUrl, "Booking Personal Trainer", "line", ext)
   };
   pg.body = () => articleBody(a, pg);
   return pg;
@@ -757,8 +717,7 @@ const homeMust = [
 ].map(esc);
 const allMust = [
   ...site.classes.map((c) => c.price),
-  ...site.schedule.flatMap((x) => [x.time, x.cls]),
-  ...ptTiers.flatMap((t) => t.rows.flatMap((r) => r.prices))
+  ...site.schedule.flatMap((x) => [x.time, x.cls])
 ].map(esc);
 const must = [...homeMust, ...allMust];
 const missing = [...homeMust.filter((x) => !out.home.includes(x)), ...allMust.filter((x) => !all.includes(x))];
@@ -766,7 +725,7 @@ if (missing.length) throw new Error("Missing in output: " + missing.join(" | "))
 for (const mm of all.matchAll(/href="(https:\/\/wa\.me[^"]*)"/g)) {
   if (!mm[1].startsWith(`https://wa.me/${b.whatsappNumber}?text=`)) throw new Error("Bad WA link: " + mm[1]);
 }
-for (const k of ["home", "personal-trainer"]) if (!out[k].includes(`href="${site.ptBookingUrl}"`)) throw new Error("PT booking link missing on " + k);
+for (const k of ["home"]) if (!out[k].includes(`href="${site.ptBookingUrl}"`)) throw new Error("PT booking link missing on " + k);
 for (const mm of all.matchAll(/src="(?:\.\.\/)?(assets\/[^"]+)"/g)) if (!existsSync(here(mm[1]))) throw new Error("Missing asset: " + mm[1]);
 // Internal links must resolve to a generated page
 const known = new Set(["", ...pages.map((p) => p.path)]);

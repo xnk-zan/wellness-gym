@@ -109,7 +109,7 @@
   }
 
   // Active nav link
-  var spy = { "membership/": "#membership", "kelas/": "#classes", "personal-trainer/": "#personal-trainer", "fasilitas/": "#facilities", "lokasi/": "#location" };
+  var spy = { "membership/": "#membership", "kelas/": "#classes", "fasilitas/": "#facilities", "lokasi/": "#location" };
   if (hero) $$(".nav__links a").forEach(function (a) {
     var sec = $(spy[a.getAttribute("href")] || "#none");
     if (!sec) return;
@@ -340,21 +340,6 @@
       scrollTrigger: { trigger: ".week", start: "top 85%" }
     });
 
-    /* ---------- PT: stacked cards shrink as the next one lands ---------- */
-    var tiers = $$(".tier");
-    tiers.forEach(function (t, i) {
-      var next = tiers[i + 1];
-      if (!next) return;
-      gsap.to(t, {
-        scale: .93, filter: "brightness(.55)", ease: "none",
-        scrollTrigger: { trigger: next, start: "top 70%", end: function () { return "top " + parseFloat(getComputedStyle(next).top) + "px"; }, scrub: true, invalidateOnRefresh: true }
-      });
-    });
-    from(".spin", {
-      scale: 0, rotate: -120, duration: 1.4, ease: "back.out(1.6)",
-      scrollTrigger: { trigger: ".pt", start: "top 75%" }
-    });
-
     /* ---------- Reviews wall ---------- */
     from(".wall__item", {
       y: 90, opacity: 0, duration: 1.2, stagger: .12, ease: expo,
@@ -387,7 +372,7 @@
 
     /* ---------- Magnetic primary buttons ---------- */
     if (finePointer) {
-      $$(".btn--gold, .spin").forEach(function (el) {
+      $$(".btn--gold").forEach(function (el) {
         var xTo = gsap.quickTo(el, "x", { duration: .6, ease: "power3.out" });
         var yTo = gsap.quickTo(el, "y", { duration: .6, ease: "power3.out" });
         el.addEventListener("pointermove", function (e) {
