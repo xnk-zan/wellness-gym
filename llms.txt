@@ -11,6 +11,11 @@ Wellness Gym (Health · Strength · Balance) adalah gym di Purwokerto Utara, Kab
 - [Personal Trainer](https://xnk-zan.github.io/wellness-gym/personal-trainer/): Paket Entry, Core, Premium, booking online
 - [Fasilitas](https://xnk-zan.github.io/wellness-gym/fasilitas/): Gym Equipment, Instruktur Gym, Locker, WiFi, Shower, Personal Trainer
 - [Lokasi](https://xnk-zan.github.io/wellness-gym/lokasi/): Jl. Jatisari No.24, Purwokerto Utara. Senin–Sabtu 06.00–21.00, Minggu 06.00–12.00
+- [Tips](https://xnk-zan.github.io/wellness-gym/tips/): Ringkasan jurnal ilmiah tentang latihan beban, protein, dan kesehatan mental
+- [Frekuensi latihan beban](https://xnk-zan.github.io/wellness-gym/tips/latihan-beban-berapa-kali-seminggu/): Ringkasan bukti ilmiah tentang frekuensi latihan beban untuk pemula: rekomendasi WHO, meta-analisis pembesaran otot, dan posisi ACSM, lengkap dengan referensi.
+- [Progresi beban untuk pemula](https://xnk-zan.github.io/wellness-gym/tips/progresi-beban-untuk-pemula/): Cara menaikkan beban latihan secara bertahap untuk pemula berdasarkan posisi resmi American College of Sports Medicine: repetisi, frekuensi, dan kenaikan beban.
+- [Protein dan massa otot](https://xnk-zan.github.io/wellness-gym/tips/protein-dan-massa-otot/): Apa kata meta-analisis 49 studi tentang suplemen protein dan latihan beban: besar manfaat, batas sekitar 1,6 g/kg per hari, dan siapa yang paling diuntungkan.
+- [Olahraga dan kesehatan mental](https://xnk-zan.github.io/wellness-gym/tips/olahraga-dan-kesehatan-mental/): Ringkasan overview 97 tinjauan sistematis tentang aktivitas fisik, depresi, kecemasan, dan distres pada orang dewasa, beserta keterbatasan buktinya.
 - [FAQ](https://xnk-zan.github.io/wellness-gym/faq/): Harga, jadwal, Personal Trainer, jam buka, lokasi
 
 ## Informasi utama
@@ -105,3 +110,10 @@ Jl. Jatisari No.24, Karangmiri, Sumampir, Kec. Purwokerto Utara, Kab. Banyumas, 
 
 ### Bagaimana ulasan Wellness Gym?
 Rating 4.9/5 · 17 Google Reviews.
+
+## Referensi ilmiah (dikutip di halaman Tips)
+- Bull FC, Al-Ansari SS, Biddle S, et al. (2020). World Health Organization 2020 guidelines on physical activity and sedentary behaviour. Br J Sports Med. https://doi.org/10.1136/bjsports-2020-102955
+- American College of Sports Medicine. (2009). American College of Sports Medicine position stand. Progression models in resistance training for healthy adults. Med Sci Sports Exerc. https://doi.org/10.1249/MSS.0b013e3181915670
+- Schoenfeld BJ, Ogborn D, Krieger JW. (2016). Effects of resistance training frequency on measures of muscle hypertrophy: a systematic review and meta-analysis. Sports Med. https://doi.org/10.1007/s40279-016-0543-8
+- Morton RW, Murphy KT, McKellar SR, et al. (2018). A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. Br J Sports Med. https://doi.org/10.1136/bjsports-2017-097608
+- Singh B, Olds T, Curtis R, et al. (2023). Effectiveness of physical activity interventions for improving depression, anxiety and distress: an overview of systematic reviews. Br J Sports Med. https://doi.org/10.1136/bjsports-2022-106195

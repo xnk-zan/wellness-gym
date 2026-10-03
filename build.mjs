@@ -3,6 +3,7 @@
 // Pages: / , /membership/ , /kelas/ , /personal-trainer/ , /fasilitas/ , /lokasi/ , /faq/
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { site, waLink } from "./data.mjs";
+import { references, articles, events, contentDate } from "./content.mjs";
 
 const here = (p) => new URL("./" + p, import.meta.url);
 const esc = (s) => String(s)
@@ -326,6 +327,7 @@ const pages = [
     key: "faq", path: "faq/", nav: "FAQ", crumb: "FAQ",
     title: "FAQ Wellness Gym Purwokerto | Harga, Jadwal, Lokasi",
     desc: "Jawaban singkat tentang harga membership, visit gym, kelas, Personal Trainer, jam buka, dan lokasi Wellness Gym Purwokerto.",
+    header: false,
     h1: "Pertanyaan umum",
     intro: "Jawaban singkat tentang harga, jadwal kelas, Personal Trainer, jam buka, dan lokasi. Tidak menemukan jawabannya? Tanya langsung lewat WhatsApp.",
     short: "Harga, jadwal, Personal Trainer, jam buka, lokasi",
@@ -335,16 +337,119 @@ const pages = [
     images: []
   }
 ];
+
+// ---------- Tips (cited articles) and gallery ----------
+const fmtDate = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const wordsOf = (a) => [a.intro, ...a.points, ...a.sections.flatMap((x) => x.p)].join(" ").split(/\s+/).length;
+const readMin = (a) => Math.max(1, Math.ceil(wordsOf(a) / 180));
+
+function cite(text, order) {
+  return esc(text).replace(/\{\{(\w+)\}\}/g, (_, id) => {
+    if (!references[id]) throw new Error("Unknown reference: " + id);
+    let i = order.indexOf(id);
+    if (i < 0) { order.push(id); i = order.length - 1; }
+    return `<sup class="cite"><a href="#ref-${id}" aria-label="Referensi ${i + 1}">[${i + 1}]</a></sup>`;
+  });
+}
+
+function articleBody(a, pg) {
+  const order = [];
+  const pts = a.points.map((t) => `<li>${cite(t, order)}</li>`).join("");
+  const secs = a.sections.map((x) => `<section><h2>${esc(x.h)}</h2>${x.p.map((t) => `<p>${cite(t, order)}</p>`).join("")}</section>`).join("");
+  const declared = [...a.refs].sort().join(",");
+  if (declared !== [...order].sort().join(",")) throw new Error(`Cited refs (${order}) differ from declared refs (${a.refs}) in ${a.slug}`);
+  const refs = order.map((id) => {
+    const r = references[id];
+    return `<li id="ref-${id}">${esc(r.authors)} (${r.year}). ${esc(r.title)} <i>${esc(r.journal)}</i>. ${r.year};${r.volume}(${r.issue}):${r.pages}. <a href="https://doi.org/${r.doi}" ${ext}>doi:${esc(r.doi)}</a> · <a href="https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/" ${ext}>PubMed ${r.pmid}</a></li>`;
+  }).join("\n      ");
+  return `<article class="sec prose-wrap">
+  <div class="prose">
+    <aside class="keypts" aria-labelledby="kp-title"><h2 id="kp-title">Ringkasan</h2><ul>${pts}</ul></aside>
+    ${secs}
+    <p class="disclaimer">Artikel ini ringkasan edukasi umum dari literatur yang dikutip, bukan nasihat medis. Jika kamu memiliki kondisi kesehatan tertentu, konsultasikan dengan tenaga kesehatan sebelum mengubah program latihan atau pola makan.</p>
+    <section class="refs" aria-labelledby="refs-title">
+      <h2 id="refs-title">Referensi</h2>
+      <ol>
+      ${refs}
+      </ol>
+      <p class="refs__note">Referensi diverifikasi melalui PubMed pada ${fmtDate(contentDate)}.</p>
+    </section>
+  </div>
+</article>`;
+}
+
+const tipKeys = articles.map((a) => "tip-" + a.slug);
+const tipsIndex = {
+  key: "tips", path: "tips/", nav: "Tips", crumb: "Tips",
+  title: "Tips Latihan Berbasis Jurnal Ilmiah | Wellness Gym Purwokerto",
+  desc: "Tips latihan beban, progresi, protein, dan kesehatan mental yang dirangkum dari jurnal ilmiah, lengkap dengan referensi dan DOI.",
+  h1: "Tips latihan berbasis penelitian",
+  intro: "Ringkasan singkat dari jurnal ilmiah tentang latihan, nutrisi, dan kesehatan. Setiap artikel mencantumkan referensi dan DOI agar bisa kamu cek sendiri.",
+  short: "Ringkasan jurnal ilmiah tentang latihan beban, protein, dan kesehatan mental",
+  related: ["membership", "personal-trainer", "kelas"],
+  ctas: () => waBtn(site.waGeneralMessage) + btn(u("membership/"), "Lihat Membership", "line"),
+  body: () => `<section class="sec" aria-labelledby="tips-list-title">
+  <h2 class="sr-only" id="tips-list-title">Daftar artikel</h2>
+  <ul class="rel">
+    ${articles.map((a) => `<li><a href="${u("tips/" + a.slug + "/")}"><span class="rel__name">${esc(a.h1)}</span><span class="rel__desc">${esc(a.intro)} ${readMin(a)} menit baca.</span>${arrow}</a></li>`).join("\n    ")}
+  </ul>
+</section>`,
+  images: []
+};
+const articlePages = articles.map((a, i) => {
+  const pg = {
+    key: tipKeys[i], path: `tips/${a.slug}/`, nav: null, navKey: "tips", crumb: a.crumb,
+    trail: [["Tips", "tips/"], [a.crumb]],
+    title: a.title, desc: a.desc, h1: a.h1, intro: a.intro,
+    meta: `Diperbarui ${fmtDate(contentDate)} · ${readMin(a)} menit baca · ${a.refs.length} referensi ilmiah`,
+    short: a.desc, article: a, images: [],
+    related: [...tipKeys.filter((k) => k !== tipKeys[i]).slice(0, 2), "personal-trainer"],
+    ctas: () => waBtn(site.waGeneralMessage) + btn(u("personal-trainer/"), "Lihat Personal Trainer", "line")
+  };
+  pg.body = () => articleBody(a, pg);
+  return pg;
+});
+
+const galleryReady = events.every((e) => e.photo);
+const galeri = {
+  key: "galeri", path: "galeri/", nav: "Galeri", crumb: "Galeri",
+  hidden: !galleryReady, noindex: !galleryReady,
+  title: "Galeri Wellness Gym Purwokerto | Kegiatan dan Kelas",
+  desc: "Foto kegiatan, kelas senam dan aerobic, serta suasana latihan bersama instruktur di Wellness Gym Purwokerto.",
+  h1: "Galeri & kegiatan",
+  intro: "Suasana latihan, kelas, dan kegiatan di Wellness Gym. Foto akan terus ditambah.",
+  short: "Foto kegiatan, kelas, dan suasana latihan",
+  related: ["kelas", "fasilitas", "membership"],
+  ctas: () => waBtn(site.waGeneralMessage) + btn(u("membership/"), "Lihat Membership", "line"),
+  body: () => `<section class="sec" aria-labelledby="gal-title">
+  <h2 class="sr-only" id="gal-title">Foto kegiatan</h2>
+  <ul class="gal">
+    ${events.map((e) => `<li class="gal__item" data-spot>
+      <div class="gal__media">${e.photo ? photo(e.photo, "gal__img", "(max-width: 767px) 100vw, 40vw") : `<div class="gal__ph" role="img" aria-label="Foto kegiatan, menyusul"><span>Foto menyusul</span></div>`}</div>
+      <h3>${esc(e.title)}</h3>
+    </li>`).join("\n    ")}
+  </ul>
+</section>`,
+  images: []
+};
+pages.splice(pages.findIndex((x) => x.key === "faq"), 0, tipsIndex, ...articlePages, galeri);
+
 const pageByKey = Object.fromEntries(pages.map((p) => [p.key, p]));
 const pageUrl = (p) => site.url + p.path;
 
-const navLinks = (cur) => pages.filter((p) => p.nav).map((p) => `<a href="${u(p.path)}"${p.key === cur ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("");
+const navLinks = (cur, footer = false) => pages.filter((p) => p.nav && !p.hidden && (footer || p.header !== false)).map((p) => `<a href="${u(p.path)}"${p.key === cur ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("");
+
+const crumbsHtml = (p) => {
+  const trail = p.trail || [[p.crumb]];
+  return `<nav class="crumbs" aria-label="Breadcrumb"><a href="${u("") || "./"}">Beranda</a>${trail.map(([label, path]) => `<span aria-hidden="true">/</span>` + (path ? `<a href="${u(path)}">${esc(label)}</a>` : `<span aria-current="page">${esc(label)}</span>`)).join("")}</nav>`;
+};
 
 const pageHead = (p) => `<header class="phead">
   <div class="phead__in">
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="${u("")  || "./"}">Beranda</a><span aria-hidden="true">/</span><span aria-current="page">${esc(p.crumb)}</span></nav>
+    ${crumbsHtml(p)}
     <h1 class="phead__title" data-split>${esc(p.h1)}</h1>
     <p class="phead__intro">${esc(p.intro)}</p>
+    ${p.meta ? `<p class="phead__meta">${esc(p.meta)}</p>` : ""}
     <div class="hero__ctas">${p.ctas()}</div>
   </div>
 </header>`;
@@ -352,7 +457,7 @@ const pageHead = (p) => `<header class="phead">
 const related = (p) => `<section class="sec related" aria-labelledby="rel-title">
   <h2 class="rel__title" id="rel-title">Lihat juga</h2>
   <ul class="rel">
-    ${p.related.map((k) => `<li><a href="${u(pageByKey[k].path)}"><span class="rel__name">${esc(pageByKey[k].nav)}</span><span class="rel__desc">${esc(pageByKey[k].short)}</span>${arrow}</a></li>`).join("\n    ")}
+    ${p.related.map((k) => `<li><a href="${u(pageByKey[k].path)}"><span class="rel__name">${esc(pageByKey[k].nav || pageByKey[k].crumb)}</span><span class="rel__desc">${esc(pageByKey[k].short)}</span>${arrow}</a></li>`).join("\n    ")}
   </ul>
 </section>`;
 
@@ -460,18 +565,25 @@ function jsonLd(p) {
     ...(p.key !== "home" && { breadcrumb: { "@id": url + "#breadcrumb" } })
   };
   if (p.key === "home") return { "@context": "https://schema.org", "@graph": [webSite, webPage, gymNode] };
+  const trail = p.trail || [[p.crumb]];
+  const crumbs = { "@type": "BreadcrumbList", "@id": url + "#breadcrumb", itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Beranda", item: site.url },
+    ...trail.map(([label, path], i) => ({ "@type": "ListItem", position: i + 2, name: label, item: path ? site.url + path : url }))
+  ] };
+  if (p.article) {
+    const a = p.article;
+    return { "@context": "https://schema.org", "@graph": [webPage, crumbs, {
+      "@type": "Article", "@id": url + "#article", headline: a.h1, description: a.desc,
+      datePublished: contentDate, dateModified: contentDate, inLanguage: "id-ID",
+      mainEntityOfPage: { "@id": url + "#webpage" }, author: { "@id": gymId }, publisher: { "@id": gymId },
+      image: site.url + "og-image.png",
+      citation: a.refs.map((id) => ({ "@type": "ScholarlyArticle", name: references[id].title, datePublished: String(references[id].year), url: "https://doi.org/" + references[id].doi, sameAs: "https://pubmed.ncbi.nlm.nih.gov/" + references[id].pmid + "/", isPartOf: { "@type": "Periodical", name: references[id].journal } }))
+    }] };
+  }
   const list = faqsFor(p.key);
-  return {
-    "@context": "https://schema.org",
-    "@graph": [
-      webPage,
-      { "@type": "BreadcrumbList", "@id": url + "#breadcrumb", itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Beranda", item: site.url },
-        { "@type": "ListItem", position: 2, name: p.crumb, item: url }
-      ] },
-      { "@type": "FAQPage", "@id": url + "#faq", inLanguage: "id-ID", mainEntity: list.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }
-    ]
-  };
+  const graph = [webPage, crumbs];
+  if (list.length) graph.push({ "@type": "FAQPage", "@id": url + "#faq", inLanguage: "id-ID", mainEntity: list.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) });
+  return { "@context": "https://schema.org", "@graph": graph };
 }
 
 // ---------- Layout ----------
@@ -485,7 +597,7 @@ function layout(p, body) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(p.title)}</title>
 <meta name="description" content="${esc(p.desc)}">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="robots" content="${p.noindex ? "noindex, follow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"}">
 <meta name="author" content="${esc(b.name)}">
 <meta name="geo.region" content="ID-JT">
 <meta name="geo.placename" content="Purwokerto">
@@ -542,12 +654,12 @@ ${HOME ? `<link rel="preload" as="image" href="${heroP.src}" imagesrcset="${hero
 
 <header class="nav" id="nav">
   <a class="nav__brand" href="${HOME ? "#top" : u("")}" aria-label="Wellness Gym, ${HOME ? "ke atas" : "ke beranda"}">${logo("nav__logo")}<span>Wellness Gym</span></a>
-  <nav class="nav__links" aria-label="Navigasi utama">${navLinks(p.key)}</nav>
+  <nav class="nav__links" aria-label="Navigasi utama">${navLinks(p.navKey || p.key)}</nav>
   ${waBtn(site.waGeneralMessage, "Chat WhatsApp", "gold btn--sm nav__cta")}
   <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="menu"><span class="nav__toggle-text">Menu</span></button>
 </header>
 <nav class="menu" id="menu" aria-label="Navigasi mobile" hidden>
-  <div class="menu__links">${navLinks(p.key)}</div>
+  <div class="menu__links">${navLinks(p.navKey || p.key, true)}</div>
   ${waBtn(site.waGeneralMessage)}
   <p class="menu__meta">${esc(b.address)}</p>
 </nav>
@@ -562,7 +674,7 @@ ${body}
       <p class="footer__tag">${esc(b.tagline)}</p>
       <address>${esc(b.address)}</address>
     </div>
-    <nav aria-label="Navigasi footer" class="footer__nav">${navLinks(p.key)}</nav>
+    <nav aria-label="Navigasi footer" class="footer__nav">${navLinks(p.navKey || p.key, true)}</nav>
     <ul class="footer__social">
       <li><a href="${esc(waLink(site.waGeneralMessage))}" ${ext}>WhatsApp ${esc(b.whatsappDisplay)}</a></li>
       <li><a href="${b.instagramUrl}" ${ext}>Instagram ${esc(b.instagram)}</a></li>
@@ -585,7 +697,7 @@ ${body}
 const out = {};
 for (const p of pages) {
   HOME = p.key === "home";
-  REL = p.path ? "../" : "";
+  REL = "../".repeat(p.path.split("/").filter(Boolean).length);
   if (p.key !== "home" && p.desc.length > 165) throw new Error(`Description too long (${p.desc.length}) on ${p.key}`);
   const body = HOME ? homeBody() : pageHead(p) + p.body() + related(p) + finalSec();
   out[p.key] = layout(p, body);
@@ -616,8 +728,8 @@ for (const mm of all.matchAll(/src="(?:\.\.\/)?(assets\/[^"]+)"/g)) if (!existsS
 // Internal links must resolve to a generated page
 const known = new Set(["", ...pages.map((p) => p.path)]);
 for (const [k, html] of Object.entries(out)) {
-  for (const mm of html.matchAll(/<a [^>]*href="((?:\.\.\/)?(?:[a-z-]+\/)?)"/g)) {
-    const target = mm[1].replace(/^\.\.\//, "");
+  for (const mm of html.matchAll(/<a [^>]*href="((?:\.\.\/)*(?:[a-z0-9-]+\/)*)"/g)) {
+    const target = mm[1].replace(/^(?:\.\.\/)+/, "");
     if (!known.has(target)) throw new Error(`Broken internal link "${mm[1]}" on ${k}`);
   }
 }
@@ -630,7 +742,7 @@ const imgTags = (keys) => keys.map((k) => `    <image:image><image:loc>${site.ur
 const imgKeys = (p) => (p.key === "home" ? homeImgs : (p.images || []).map((i) => (P[i] ? i : site[i])));
 writeFileSync(here("sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${pages.map((p) => `  <url>
+${pages.filter((p) => !p.noindex).map((p) => `  <url>
     <loc>${pageUrl(p)}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${p.key === "home" || p.key === "kelas" ? "weekly" : "monthly"}</changefreq>
@@ -666,7 +778,7 @@ writeFileSync(here("llms.txt"), `# ${b.name} Purwokerto
 ${b.name} (${b.tagline}) adalah gym di Purwokerto Utara, Kabupaten Banyumas, Jawa Tengah.
 
 ## Halaman
-${pages.map((p) => `- [${p.nav || "Beranda"}](${pageUrl(p)}): ${p.key === "home" ? "Ringkasan gym, harga, jadwal, dan lokasi" : p.short}`).join("\n")}
+${pages.filter((p) => !p.noindex).map((p) => `- [${p.nav || p.crumb || "Beranda"}](${pageUrl(p)}): ${p.key === "home" ? "Ringkasan gym, harga, jadwal, dan lokasi" : p.short}`).join("\n")}
 
 ## Informasi utama
 - Alamat: ${b.address}
@@ -689,6 +801,9 @@ ${site.facilities.map((f) => `- ${f.name}`).join("\n")}
 
 ## Tanya jawab
 ${faqs.map((f) => `### ${f.q}\n${f.a}`).join("\n\n")}
+
+## Referensi ilmiah (dikutip di halaman Tips)
+${Object.values(references).map((r) => `- ${r.authors} (${r.year}). ${r.title} ${r.journal}. https://doi.org/${r.doi}`).join("\n")}
 `);
 
 writeFileSync(here("404.html"), `<!DOCTYPE html>
