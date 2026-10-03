@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://xnk-zan.github.io/wellness-gym/sitemap.xml
