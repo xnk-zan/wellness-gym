@@ -76,7 +76,12 @@
 
   if (!window.gsap || !window.ScrollTrigger) { doc.classList.remove("pending"); return; } // CDN blocked: static page still complete
   // Split text only after webfonts settle (capped so a slow font CDN never stalls the page)
-  var fontsReady = document.fonts ? Promise.race([document.fonts.ready, new Promise(function (r) { setTimeout(r, 1500); })]) : Promise.resolve();
+  var fontsReady = Promise.race([
+    new Promise(function (r) { document.readyState === "complete" ? r() : window.addEventListener("load", r); })
+      .then(function () { return document.fonts ? Promise.all([document.fonts.load('600 1em "Clash Display"'), document.fonts.load('400 1em Satoshi'), document.fonts.load('500 1em "Geist Mono"')]).then(function () { return document.fonts.ready; }) : null; })
+      .catch(function () {}),
+    new Promise(function (r) { setTimeout(r, 2500); })
+  ]);
   fontsReady.then(motion);
 
   function motion() {
@@ -141,35 +146,46 @@
     var expo = "expo.out";
 
     /* ---------- Loader + hero intro ---------- */
-    var loader = document.createElement("div");
-    loader.className = "loader";
-    loader.setAttribute("aria-hidden", "true");
-    loader.innerHTML = '<div class="loader__panel loader__panel--top"></div><div class="loader__panel loader__panel--bot"></div>' +
-      '<div class="loader__inner"><img class="loader__logo" src="logo-320.webp" alt="" width="72" height="72"><div class="loader__bar"><span></span></div><p class="loader__count">000</p></div>';
-    document.body.appendChild(loader);
+    // Loader plays once per browser session; returning visitors go straight to the hero reveal.
+    var seen = false;
+    try { seen = !!sessionStorage.getItem("wg-seen"); sessionStorage.setItem("wg-seen", "1"); } catch (e) {}
+    var loader = null;
+    if (!seen) {
+      loader = document.createElement("div");
+      loader.className = "loader";
+      loader.setAttribute("aria-hidden", "true");
+      loader.innerHTML = '<div class="loader__panel loader__panel--top"></div><div class="loader__panel loader__panel--bot"></div>' +
+        '<div class="loader__inner"><img class="loader__logo" src="logo-320.webp" alt="" width="72" height="72"><div class="loader__bar"><span></span></div><p class="loader__count">000</p></div>';
+      document.body.appendChild(loader);
+    }
     var count = { v: 0 };
     var heroTitle = $(".hero__title");
     var heroLines = hasSplit ? SplitText.create(heroTitle, { type: "lines", mask: "lines", linesClass: "split-line" }).lines : $$(".line", heroTitle);
 
     gsap.set(heroLines, { yPercent: 110 });
-    gsap.set(".hero .kicker, .hero__sub, .hero .hero__ctas > *, .hero__loc", { y: 24, opacity: 0 });
+    gsap.set(".hero .kicker, .hero .hero__ctas > *, .hero__loc", { y: 24, opacity: 0 });
+    gsap.set(".hero__sub", { y: 24 }); // stays painted so the paragraph counts as an early LCP candidate
     gsap.set(".hero__frame", { scale: 1.25 });
     gsap.set(nav, { yPercent: -100 });
     doc.classList.remove("pending");
 
     var intro = gsap.timeline({ defaults: { ease: expo } });
+    if (loader) {
+      intro
+        .to(count, { v: 100, duration: .8, ease: "power2.inOut", onUpdate: function () { loader.querySelector(".loader__count").textContent = String(Math.round(count.v)).padStart(3, "0"); } })
+        .to(".loader__bar span", { scaleX: 1, duration: .8, ease: "power2.inOut" }, 0)
+        .to(".loader__inner", { opacity: 0, y: -20, duration: .3, ease: "power2.in" })
+        .to(".loader__panel--top", { yPercent: -100, duration: 1, ease: "expo.inOut" }, "-=.05")
+        .to(".loader__panel--bot", { yPercent: 100, duration: 1, ease: "expo.inOut" }, "<");
+    }
     intro
-      .to(count, { v: 100, duration: 1.1, ease: "power2.inOut", onUpdate: function () { loader.querySelector(".loader__count").textContent = String(Math.round(count.v)).padStart(3, "0"); } })
-      .to(".loader__bar span", { scaleX: 1, duration: 1.1, ease: "power2.inOut" }, 0)
-      .to(".loader__inner", { opacity: 0, y: -20, duration: .4, ease: "power2.in" })
-      .to(".loader__panel--top", { yPercent: -100, duration: 1.1, ease: "expo.inOut" }, "-=.05")
-      .to(".loader__panel--bot", { yPercent: 100, duration: 1.1, ease: "expo.inOut" }, "<")
-      .to(".hero__frame", { scale: 1, duration: 2, ease: "expo.out" }, "<")
+      .to(".hero__frame", { scale: 1, duration: 2, ease: "expo.out" }, loader ? "<" : 0)
       .to(heroLines, { yPercent: 0, duration: 1.3, stagger: .12 }, "<.35")
       .to(".hero .kicker", { y: 0, opacity: 1, duration: 1 }, "<.1")
-      .to(".hero__sub, .hero .hero__ctas > *, .hero__loc", { y: 0, opacity: 1, duration: 1, stagger: .08 }, "<.25")
+      .to(".hero__sub", { y: 0, duration: 1 }, "<.25")
+      .to(".hero .hero__ctas > *, .hero__loc", { y: 0, opacity: 1, duration: 1, stagger: .08 }, "<")
       .to(nav, { yPercent: 0, duration: 1 }, "<")
-      .add(function () { loader.remove(); });
+      .add(function () { if (loader) loader.remove(); });
 
     // Hero recedes into a framed plate while scrolling away
     gsap.to(".hero__frame", {
@@ -228,11 +244,19 @@
     });
 
     /* ---------- Section titles: masked char rise ---------- */
+    // Split lazily, just before each title nears the viewport, so first load stays light.
     $$("[data-split]").forEach(function (el) {
-      var chars = hasSplit ? SplitText.create(el, { type: "lines,chars", mask: "lines", linesClass: "split-line" }).chars : [el];
-      gsap.from(chars, {
-        yPercent: 110, duration: 1.1, stagger: .025, ease: expo,
-        scrollTrigger: { trigger: el, start: "top 85%" }
+      ScrollTrigger.create({
+        trigger: el, start: "top 150%", once: true,
+        onEnter: function () {
+          (document.fonts ? document.fonts.ready : Promise.resolve()).then(function () {
+          var chars = hasSplit ? SplitText.create(el, { type: "lines,chars", mask: "lines", linesClass: "split-line" }).chars : [el];
+          gsap.from(chars, {
+            yPercent: 110, duration: 1.1, stagger: .025, ease: expo,
+            scrollTrigger: { trigger: el, start: "top 85%" }
+          });
+          });
+        }
       });
     });
 
@@ -282,6 +306,12 @@
       scrollTrigger: { trigger: ".classes", start: "top 80%" }
     });
 
+    /* ---------- FAQ ---------- */
+    gsap.from(".faq__item", {
+      y: 40, opacity: 0, duration: 1, stagger: .06, ease: expo,
+      scrollTrigger: { trigger: ".faq__list", start: "top 85%" }
+    });
+
     /* ---------- Week grid ---------- */
     gsap.from(".week__day", {
       y: 50, opacity: 0, duration: .9, stagger: .06, ease: expo,
@@ -317,7 +347,7 @@
 
     /* ---------- Final CTA ---------- */
     var finalTitle = $(".final__title");
-    var finalLines = hasSplit ? SplitText.create(finalTitle.children, { type: "lines", mask: "lines", linesClass: "split-line" }).lines : finalTitle.children;
+    var finalLines = hasSplit ? SplitText.create(finalTitle.children, { type: "lines", mask: "lines", linesClass: "split-line", aria: "none" }).lines : finalTitle.children;
     gsap.from(finalLines, {
       yPercent: 110, duration: 1.3, stagger: .12, ease: expo,
       scrollTrigger: { trigger: finalTitle, start: "top 80%" }

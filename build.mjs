@@ -56,29 +56,72 @@ const marqueeWords = [b.tagline.split(" · "), site.classes.flatMap((c) => c.nam
 
 const priceNum = (s) => Number(String(s).replace(/[^0-9]/g, ""));
 
+// ---------- Structured data + FAQ: every figure is derived from data.mjs ----------
+const idr = (n) => "Rp" + n.toLocaleString("id-ID");
+const gymId = site.url + "#gym";
+const ptTiers = site.personalTrainer.tiers;
+const offers = [
+  ...site.membership.single.flatMap((m) => [[`Membership ${m.type} 1 bulan`, m.oneMonth], [`Membership ${m.type} 3 bulan`, m.threeMonth]]),
+  ...site.membership.couple.map((c) => [`Membership ${c.type} per bulan`, c.price]),
+  ["Visit Gym per kunjungan", site.visitGym.price],
+  ...site.classes.map((c) => [`Kelas ${c.name} per kedatangan`, c.price]),
+  ...ptTiers.flatMap((t) => t.rows.flatMap((r) => t.cols.map((c, i) => [`Personal Trainer ${t.name} ${r.segment} ${c}`, r.prices[i], site.ptBookingUrl])))
+].map(([name, price, url]) => ({ "@type": "Offer", name, price: priceNum(price), priceCurrency: "IDR", ...(url && { url }), itemOffered: { "@type": "Service", name } }));
+const prices = offers.map((o) => o.price);
+const dayText = days.map((d) => `${d} ${site.schedule.filter((x) => x.day === d).map((x) => `${x.time} ${x.cls}`).join(", ")}`).join("; ");
+const m = site.membership;
+const faqs = [
+  ["Berapa harga membership Wellness Gym Purwokerto?",
+    `Membership General ${m.single[0].oneMonth} untuk 1 bulan dan ${m.single[0].threeMonth} untuk 3 bulan. Membership Student ${m.single[1].oneMonth} untuk 1 bulan dan ${m.single[1].threeMonth} untuk 3 bulan. Paket couple: ${m.couple.map((c) => `${c.type} ${c.price}`).join(" dan ")}.`],
+  ["Berapa harga visit gym harian?",
+    `Visit gym ${site.visitGym.price}. ${site.visitGym.copy} Untuk ketentuan visit, tanyakan lewat WhatsApp ${b.whatsappDisplay}.`],
+  ["Jam buka Wellness Gym kapan?",
+    b.hours.map((h) => `${h.days} pukul ${h.time}`).join(", ") + "."],
+  ["Di mana lokasi Wellness Gym?",
+    `${b.address}. Gym ini berada di Purwokerto Utara, Kabupaten Banyumas.`],
+  ["Kelas apa saja yang ada dan berapa harganya?",
+    site.classes.map((c) => `${c.name} ${c.price}`).join("; ") + `. Jadwal mingguan: ${dayText}. ${site.scheduleNote}`],
+  ["Apakah ada Personal Trainer di Wellness Gym?",
+    `Ada. Paket ${ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()})`).join(", ")}, harga mulai ${ptTiers[0].rows[0].prices[0]} untuk ${ptTiers[0].cols[0].toLowerCase()} segmen ${ptTiers[0].rows[0].segment.toLowerCase()}. Booking Personal Trainer lewat ${site.ptBookingUrl.replace("https://", "")}.`],
+  ["Fasilitas apa saja yang tersedia?",
+    site.facilities.map((f) => f.name).join(", ") + "."],
+  ["Bagaimana ulasan Wellness Gym?",
+    `Rating ${site.socialProof.rating}.`]
+];
+
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "ExerciseGym",
-  name: b.name,
-  slogan: b.tagline,
-  url: site.url,
-  image: [site.url + heroP.src, site.url + "og-image.png"],
-  logo: site.url + "logo.png",
-  telephone: b.telephone,
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "Jl. Jatisari No.24, Karangmiri, Sumampir",
-    addressLocality: "Purwokerto Utara",
-    addressRegion: "Jawa Tengah",
-    postalCode: "53125",
-    addressCountry: "ID"
-  },
-  openingHoursSpecification: [
-    { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "06:00", closes: "21:00" },
-    { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "06:00", closes: "12:00" }
-  ],
-  aggregateRating: { "@type": "AggregateRating", ratingValue: b.rating, reviewCount: b.reviewCount, bestRating: 5 },
-  sameAs: [b.instagramUrl, b.tiktokUrl]
+  "@graph": [
+    { "@type": "WebSite", "@id": site.url + "#website", url: site.url, name: b.name, inLanguage: "id-ID", publisher: { "@id": gymId } },
+    { "@type": "WebPage", "@id": site.url + "#webpage", url: site.url, name: site.seo.title, description: site.seo.description, inLanguage: "id-ID",
+      isPartOf: { "@id": site.url + "#website" }, about: { "@id": gymId }, primaryImageOfPage: { "@type": "ImageObject", url: site.url + "og-image.png", width: 1200, height: 630 } },
+    {
+      "@type": "ExerciseGym", "@id": gymId,
+      name: b.name, slogan: b.tagline, description: site.seo.description, url: site.url,
+      image: [site.url + "og-image.png", site.url + heroP.src, site.url + P.instructor.src, site.url + P.dumbbell.src],
+      logo: site.url + "logo.png",
+      telephone: b.telephone,
+      priceRange: `${idr(Math.min(...prices))} - ${idr(Math.max(...prices))}`,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "Jl. Jatisari No.24, Karangmiri, Sumampir",
+        addressLocality: "Purwokerto Utara",
+        addressRegion: "Jawa Tengah",
+        postalCode: "53125",
+        addressCountry: "ID"
+      },
+      areaServed: { "@type": "City", name: "Purwokerto" },
+      hasMap: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(b.address),
+      openingHoursSpecification: [
+        { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "06:00", closes: "21:00" },
+        { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "06:00", closes: "12:00" }
+      ],
+      amenityFeature: site.facilities.map((f) => ({ "@type": "LocationFeatureSpecification", name: f.name, value: true })),
+      hasOfferCatalog: { "@type": "OfferCatalog", name: "Harga Wellness Gym", itemListElement: offers },
+      sameAs: [b.instagramUrl, b.tiktokUrl]
+    },
+    { "@type": "FAQPage", "@id": site.url + "#faq", inLanguage: "id-ID", mainEntity: faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) }
+  ]
 };
 
 const html = `<!DOCTYPE html>
@@ -88,21 +131,29 @@ const html = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(site.seo.title)}</title>
 <meta name="description" content="${esc(site.seo.description)}">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="author" content="${esc(b.name)}">
+<meta name="geo.region" content="ID-JT">
+<meta name="geo.placename" content="Purwokerto">
+<link rel="alternate" hreflang="id" href="${site.url}">
+<link rel="alternate" hreflang="x-default" href="${site.url}">
 <meta name="theme-color" content="#0d0b12">
 <link rel="canonical" href="${site.url}">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="id_ID">
+<meta property="og:site_name" content="${esc(b.name)}">
 <meta property="og:url" content="${site.url}">
 <meta property="og:title" content="${esc(site.seo.title)}">
 <meta property="og:description" content="${esc(site.seo.description)}">
 <meta property="og:image" content="${site.url}og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Wellness Gym Purwokerto, area latihan dengan alat beban hitam-ungu">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(site.seo.title)}">
 <meta name="twitter:description" content="${esc(site.seo.description)}">
 <meta name="twitter:image" content="${site.url}og-image.png">
+<meta name="twitter:image:alt" content="Wellness Gym Purwokerto, area latihan dengan alat beban hitam-ungu">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -111,8 +162,9 @@ const html = `<!DOCTYPE html>
 <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap"></noscript>
 <link rel="preload" as="image" href="${heroP.src}" imagesrcset="${heroP.small} 640w, ${heroP.src} ${heroP.w}w" imagesizes="100vw">
 <link rel="stylesheet" href="styles.css">
 <script>
@@ -188,7 +240,7 @@ const html = `<!DOCTYPE html>
     <h2 class="why__title" id="why-title" data-scrub>${esc(site.whyUs.headline)}</h2>
     <ol class="why__track">
       ${site.whyUs.points.map((p, i) => {
-        const media = site.whyPhotos[i] ? photo(site.whyPhotos[i], "why__img") : "";
+        const media = site.whyPhotos[i] ? photo(site.whyPhotos[i], "why__img", "(max-width: 600px) 100vw, 44rem") : "";
         const mg = media ? "" : `<div class="why__mg" aria-hidden="true">${icons[["breath", "", "orbit", "coach"][i]]}</div>`;
         return `<li class="why__card${media ? " why__card--photo" : ""}">${media}${mg}<div class="why__body"><span class="why__n" aria-hidden="true">0${i + 1}</span><h3>${esc(p.title)}</h3><p>${esc(p.desc)}</p></div></li>`;
       }).join("\n      ")}
@@ -310,6 +362,13 @@ const html = `<!DOCTYPE html>
   </ul>
 </section>
 
+<section class="sec faq" id="faq" aria-labelledby="faq-title">
+  <header class="sec__head"><h2 class="sec__title" data-split id="faq-title">Pertanyaan umum</h2></header>
+  <dl class="faq__list">
+    ${faqs.map(([q, a]) => `<div class="faq__item"><dt><h3>${esc(q)}</h3></dt><dd>${esc(a)}</dd></div>`).join("\n    ")}
+  </dl>
+</section>
+
 <section class="sec loc" id="location" aria-labelledby="location-title">
   <div class="loc__info">
     <h2 class="sec__title" data-split id="location-title">Lokasi &amp; jam buka</h2>
@@ -388,3 +447,107 @@ for (const m of html.matchAll(/src="(assets\/[^"]+)"/g)) if (!existsSync(here(m[
 
 writeFileSync(here("index.html"), html);
 console.log("index.html written,", html.length, "bytes,", must.length, "values verified,");
+
+// ---------- Generated crawler/PWA files ----------
+const base = new URL(site.url).pathname;
+const today = new Date().toISOString().slice(0, 10);
+const imgUrls = [...new Set([site.hero.photo, ...site.whyPhotos, ...site.ribbon, site.classesPhoto, ...site.facilities.map((f) => f.photo).filter(Boolean)])];
+writeFileSync(here("sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>${site.url}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+${imgUrls.map((k) => `    <image:image><image:loc>${site.url}${P[k].src}</image:loc><image:caption>${esc(P[k].alt)}</image:caption></image:image>`).join("\n")}
+  </url>
+</urlset>
+`);
+
+writeFileSync(here("robots.txt"), `# Search and AI answer engines are welcome. Remove a group below to opt out.
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: ${site.url}sitemap.xml
+`);
+
+writeFileSync(here("llms.txt"), `# ${b.name} Purwokerto
+
+> ${site.seo.description}
+
+${b.name} (${b.tagline}) adalah gym di Purwokerto Utara, Kabupaten Banyumas, Jawa Tengah. Halaman utama: ${site.url}
+
+## Informasi utama
+- Alamat: ${b.address}
+- WhatsApp: ${b.whatsappDisplay} (${waLink(site.waGeneralMessage)})
+- Jam buka: ${b.hours.map((h) => `${h.days} ${h.time}`).join("; ")}
+- Instagram: ${b.instagramUrl}
+- TikTok: ${b.tiktokUrl}
+- Rating: ${site.socialProof.rating}
+- Booking Personal Trainer: ${site.ptBookingUrl}
+
+## Harga
+${offers.map((o) => `- ${o.name}: ${idr(o.price)}`).join("\n")}
+
+## Jadwal kelas mingguan
+${days.map((d) => `- ${d}: ${site.schedule.filter((x) => x.day === d).map((x) => `${x.time} ${x.cls}`).join(", ")}`).join("\n")}
+${site.scheduleNote}
+
+## Fasilitas
+${site.facilities.map((f) => `- ${f.name}`).join("\n")}
+
+## Tanya jawab
+${faqs.map(([q, a]) => `### ${q}\n${a}`).join("\n\n")}
+`);
+
+writeFileSync(here("404.html"), `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halaman tidak ditemukan | ${esc(b.name)}</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="${base}favicon.ico" sizes="any">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="${base}styles.css">
+<style>.nf{min-height:100svh;display:grid;align-content:center;gap:1.5rem;padding:2rem var(--gutter);max-width:var(--max);margin:0 auto}.nf h1{font:600 clamp(3rem,10vw,9rem)/.9 var(--display);letter-spacing:-.045em}.nf p{color:var(--muted);max-width:32rem}.nf .row{display:flex;flex-wrap:wrap;gap:.75rem}</style>
+</head>
+<body>
+<main class="nf">
+  <p class="kicker">404</p>
+  <h1>Halaman tidak ditemukan.</h1>
+  <p>Alamat yang kamu buka tidak ada. Kembali ke halaman utama untuk melihat membership, kelas, dan lokasi ${esc(b.name)}.</p>
+  <div class="row">
+    <a class="btn btn--gold" href="${base}"><span class="btn__label">Ke halaman utama</span></a>
+    <a class="btn btn--line" href="${esc(waLink(site.waGeneralMessage))}" ${ext}><span class="btn__label">Chat WhatsApp</span></a>
+  </div>
+</main>
+</body>
+</html>
+`);
+
+writeFileSync(here("site.webmanifest"), JSON.stringify({
+  id: base, name: `${b.name} Purwokerto`, short_name: b.name, lang: "id",
+  description: site.seo.title, start_url: base, scope: base, display: "standalone",
+  background_color: "#0d0b12", theme_color: "#0d0b12", categories: ["health", "fitness", "sports"],
+  icons: [
+    { src: "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+    { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    { src: "icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    { src: "apple-touch-icon.png", sizes: "180x180", type: "image/png" }
+  ]
+}, null, 2) + "\n");
+console.log("sitemap, robots, llms.txt, 404, manifest written;", faqs.length, "FAQs,", offers.length, "offers");

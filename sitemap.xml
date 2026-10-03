@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://xnk-zan.github.io/wellness-gym/</loc>
+    <lastmod>2026-10-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/gym-floor-1122.webp</image:loc><image:caption>Area latihan Wellness Gym dengan alat beban hitam-ungu dan lampu LED kuning di plafon</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/lobby.webp</image:loc><image:caption>Sudut lobi Wellness Gym yang bersih dengan locker dan tanaman</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/dumbbell.webp</image:loc><image:caption>Rak dumbbell dan kettlebell di Wellness Gym</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/aerobic.webp</image:loc><image:caption>Member mengikuti sesi kelas aerobic di studio Wellness Gym</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/instructor-2.webp</image:loc><image:caption>Instruktur gym mengarahkan teknik member saat latihan cable row</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/treadmill.webp</image:loc><image:caption>Dua treadmill di area kardio Wellness Gym</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/senam.webp</image:loc><image:caption>Foto bersama peserta kelas senam di studio Wellness Gym</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/locker.webp</image:loc><image:caption>Deretan locker di lobi Wellness Gym</image:caption></image:image>
+    <image:image><image:loc>https://xnk-zan.github.io/wellness-gym/assets/gym-instructor.webp</image:loc><image:caption>Instruktur Wellness Gym mendampingi member berlatih di mesin cable</image:caption></image:image>
   </url>
 </urlset>

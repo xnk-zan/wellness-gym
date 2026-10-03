@@ -5,7 +5,7 @@
   --bg-3: #1d1927;
   --cream: #efe9dd;
   --muted: #a39cae;
-  --dim: #6f687b;
+  --dim: #928ba0;
   --violet: #7b45e0;
   --violet-soft: #9a73ea;
   --led: #f2c14e;
@@ -478,3 +478,10 @@ address { font-style: normal; max-width: 26rem; }
 .classes__img { width: 100%; height: 125%; object-fit: cover; object-position: 50% 35%; }
 @media (max-width: 600px) { .classes__banner { aspect-ratio: 4 / 3; } }
 
+
+/* ---------- FAQ ---------- */
+.faq__list { border-top: 1px solid var(--line); }
+.faq__item { display: grid; grid-template-columns: 5fr 7fr; gap: 1rem clamp(1.5rem, 5vw, 5rem); padding: clamp(1.5rem, 3vw, 2.5rem) 0; border-bottom: 1px solid var(--line); }
+.faq__item h3 { font: 600 clamp(1.3rem, 2.3vw, 2rem)/1.1 var(--display); letter-spacing: -.025em; text-wrap: balance; }
+.faq__item dd { color: var(--muted); max-width: 62ch; text-wrap: pretty; }
+@media (max-width: 760px) { .faq__item { grid-template-columns: 1fr; } }
