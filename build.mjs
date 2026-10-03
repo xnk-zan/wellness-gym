@@ -1,6 +1,7 @@
-// Zero-dependency static build: renders index.html from data.mjs.
+// Zero-dependency static build: renders every page from data.mjs.
 // Usage: node build.mjs
-import { writeFileSync, existsSync } from "node:fs";
+// Pages: / , /membership/ , /kelas/ , /personal-trainer/ , /fasilitas/ , /lokasi/ , /faq/
+import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { site, waLink } from "./data.mjs";
 
 const here = (p) => new URL("./" + p, import.meta.url);
@@ -10,8 +11,18 @@ const ext = `target="_blank" rel="noopener"`;
 const b = site.brand;
 const days = [...new Set(site.schedule.map((s) => s.day))];
 const P = site.photos;
+const heroP = P[site.hero.photo];
+const priceNum = (s) => Number(String(s).replace(/[^0-9]/g, ""));
+const idr = (n) => "Rp" + n.toLocaleString("id-ID");
 
-const logo = (cls, w = 40, alt = "Wellness Gym") => `<picture><source srcset="logo-320.webp" type="image/webp"><img class="${cls}" src="logo-320.png" alt="${alt}" width="${w}" height="${w}"></picture>`;
+// ---------- Per-page context (set by the build loop before each page renders) ----------
+let REL = "";      // prefix from the current page back to the site root
+let HOME = true;   // true while rendering the home page
+const u = (p) => REL + p;
+const membershipHref = () => (HOME ? "#membership" : u("membership/"));
+
+// ---------- Small renderers ----------
+const logo = (cls, w = 40, alt = "Wellness Gym") => `<picture><source srcset="${u("logo-320.webp")}" type="image/webp"><img class="${cls}" src="${u("logo-320.png")}" alt="${alt}" width="${w}" height="${w}"></picture>`;
 const arrow = `<svg class="ico-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M8 5h11v11"/></svg>`;
 const btn = (href, label, variant, extra = "") =>
   `<a class="btn btn--${variant}" href="${esc(href)}"${extra ? " " + extra : ""}><span class="btn__label">${esc(label)}</span>${arrow}</a>`;
@@ -30,178 +41,323 @@ const icons = {
 
 const photo = (key, cls, sizes = "(max-width: 767px) 100vw, 50vw", eager = false, pos) => {
   const p = { ...P[key], ...(pos && { pos }) };
-  return `<img class="${cls}" src="${esc(p.src)}" srcset="${esc(p.small)} 640w, ${esc(p.src)} ${p.w}w" sizes="${sizes}" alt="${esc(p.alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="${p.w}" height="${p.h}"${p.pos ? ` style="object-position:${p.pos}"` : ""}>`;
+  return `<img class="${cls}" src="${esc(u(p.src))}" srcset="${esc(u(p.small))} 640w, ${esc(u(p.src))} ${p.w}w" sizes="${sizes}" alt="${esc(p.alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="${p.w}" height="${p.h}"${p.pos ? ` style="object-position:${p.pos}"` : ""}>`;
 };
-
 const facilityMedia = (f) => f.photo ? photo(f.photo, "fac__img", undefined, false, f.pos)
   : `<div class="fac__mg" aria-hidden="true">${icons[f.icon]}</div>`;
-const heroP = P[site.hero.photo];
-
-const nav = [
-  ["#membership", "Membership"],
-  ["#classes", "Classes"],
-  ["#personal-trainer", "Personal Trainer"],
-  ["#facilities", "Facilities"],
-  ["#location", "Location"]
-];
-const navLinks = nav.map(([h, l]) => `<a href="${h}">${l}</a>`).join("");
 
 // Headline split into two deliberate lines; "Kuat," gets the accent.
 const [l1, l2] = ["Sehat, Kuat, dan", "Lebih Percaya Diri."];
 if (`${l1} ${l2}` !== site.hero.headline) throw new Error("Hero headline drifted from data");
 const accent = (s) => esc(s).replace("Kuat,", `<em>Kuat,</em>`);
-
 const marqueeWords = [b.tagline.split(" · "), site.classes.flatMap((c) => c.name.split(" / "))].map((row) =>
   [...row, ...row].map((w) => `<span>${esc(w)}</span><i aria-hidden="true"></i>`).join(""));
 
-const priceNum = (s) => Number(String(s).replace(/[^0-9]/g, ""));
-
-// ---------- Structured data + FAQ: every figure is derived from data.mjs ----------
-const idr = (n) => "Rp" + n.toLocaleString("id-ID");
-const gymId = site.url + "#gym";
+// ---------- Derived facts (every figure comes from data.mjs) ----------
+const m = site.membership;
 const ptTiers = site.personalTrainer.tiers;
 const offers = [
-  ...site.membership.single.flatMap((m) => [[`Membership ${m.type} 1 bulan`, m.oneMonth], [`Membership ${m.type} 3 bulan`, m.threeMonth]]),
-  ...site.membership.couple.map((c) => [`Membership ${c.type} per bulan`, c.price]),
+  ...m.single.flatMap((x) => [[`Membership ${x.type} 1 bulan`, x.oneMonth], [`Membership ${x.type} 3 bulan`, x.threeMonth]]),
+  ...m.couple.map((c) => [`Membership ${c.type} per bulan`, c.price]),
   ["Visit Gym per kunjungan", site.visitGym.price],
   ...site.classes.map((c) => [`Kelas ${c.name} per kedatangan`, c.price]),
   ...ptTiers.flatMap((t) => t.rows.flatMap((r) => t.cols.map((c, i) => [`Personal Trainer ${t.name} ${r.segment} ${c}`, r.prices[i], site.ptBookingUrl])))
 ].map(([name, price, url]) => ({ "@type": "Offer", name, price: priceNum(price), priceCurrency: "IDR", ...(url && { url }), itemOffered: { "@type": "Service", name } }));
 const prices = offers.map((o) => o.price);
+const minPT = Math.min(...ptTiers.flatMap((t) => t.rows.flatMap((r) => r.prices.map(priceNum))));
+const minClass = Math.min(...site.classes.map((c) => priceNum(c.price)));
+const classNames = [...new Set(site.classes.flatMap((c) => c.name.split(" / ")))];
 const dayText = days.map((d) => `${d} ${site.schedule.filter((x) => x.day === d).map((x) => `${x.time} ${x.cls}`).join(", ")}`).join("; ");
-const m = site.membership;
-const faqs = [
-  ["Berapa harga membership Wellness Gym Purwokerto?",
-    `Membership General ${m.single[0].oneMonth} untuk 1 bulan dan ${m.single[0].threeMonth} untuk 3 bulan. Membership Student ${m.single[1].oneMonth} untuk 1 bulan dan ${m.single[1].threeMonth} untuk 3 bulan. Paket couple: ${m.couple.map((c) => `${c.type} ${c.price}`).join(" dan ")}.`],
-  ["Berapa harga visit gym harian?",
-    `Visit gym ${site.visitGym.price}. ${site.visitGym.copy} Untuk ketentuan visit, tanyakan lewat WhatsApp ${b.whatsappDisplay}.`],
-  ["Jam buka Wellness Gym kapan?",
-    b.hours.map((h) => `${h.days} pukul ${h.time}`).join(", ") + "."],
-  ["Di mana lokasi Wellness Gym?",
-    `${b.address}. Gym ini berada di Purwokerto Utara, Kabupaten Banyumas.`],
-  ["Kelas apa saja yang ada dan berapa harganya?",
-    site.classes.map((c) => `${c.name} ${c.price}`).join("; ") + `. Jadwal mingguan: ${dayText}. ${site.scheduleNote}`],
-  ["Apakah ada Personal Trainer di Wellness Gym?",
-    `Ada. Paket ${ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()})`).join(", ")}, harga mulai ${ptTiers[0].rows[0].prices[0]} untuk ${ptTiers[0].cols[0].toLowerCase()} segmen ${ptTiers[0].rows[0].segment.toLowerCase()}. Booking Personal Trainer lewat ${site.ptBookingUrl.replace("https://", "")}.`],
-  ["Fasilitas apa saja yang tersedia?",
-    site.facilities.map((f) => f.name).join(", ") + "."],
-  ["Bagaimana ulasan Wellness Gym?",
-    `Rating ${site.socialProof.rating}.`]
-];
+const hoursText = b.hours.map((h) => `${h.days} ${h.time}`).join(", ");
+const instrFac = site.facilities.find((f) => /instruktur/i.test(f.name)).name;
+const t0 = ptTiers[0];
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    { "@type": "WebSite", "@id": site.url + "#website", url: site.url, name: b.name, inLanguage: "id-ID", publisher: { "@id": gymId } },
-    { "@type": "WebPage", "@id": site.url + "#webpage", url: site.url, name: site.seo.title, description: site.seo.description, inLanguage: "id-ID",
-      isPartOf: { "@id": site.url + "#website" }, about: { "@id": gymId }, primaryImageOfPage: { "@type": "ImageObject", url: site.url + "og-image.png", width: 1200, height: 630 } },
-    {
-      "@type": "ExerciseGym", "@id": gymId,
-      name: b.name, slogan: b.tagline, description: site.seo.description, url: site.url,
-      image: [site.url + "og-image.png", site.url + heroP.src, site.url + P.instructor.src, site.url + P.dumbbell.src],
-      logo: site.url + "logo.png",
-      telephone: b.telephone,
-      priceRange: `${idr(Math.min(...prices))} - ${idr(Math.max(...prices))}`,
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: "Jl. Jatisari No.24, Karangmiri, Sumampir",
-        addressLocality: "Purwokerto Utara",
-        addressRegion: "Jawa Tengah",
-        postalCode: "53125",
-        addressCountry: "ID"
-      },
-      areaServed: { "@type": "City", name: "Purwokerto" },
-      hasMap: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(b.address),
-      openingHoursSpecification: [
-        { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "06:00", closes: "21:00" },
-        { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "06:00", closes: "12:00" }
-      ],
-      amenityFeature: site.facilities.map((f) => ({ "@type": "LocationFeatureSpecification", name: f.name, value: true })),
-      hasOfferCatalog: { "@type": "OfferCatalog", name: "Harga Wellness Gym", itemListElement: offers },
-      sameAs: [b.instagramUrl, b.tiktokUrl]
-    },
-    { "@type": "FAQPage", "@id": site.url + "#faq", inLanguage: "id-ID", mainEntity: faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) }
-  ]
+// ---------- FAQ pool; each entry says which pages show it ----------
+const faqs = [
+  { tags: ["membership", "faq"], q: "Berapa harga membership Wellness Gym Purwokerto?",
+    a: `Membership General ${m.single[0].oneMonth} untuk 1 bulan dan ${m.single[0].threeMonth} untuk 3 bulan. Membership Student ${m.single[1].oneMonth} untuk 1 bulan dan ${m.single[1].threeMonth} untuk 3 bulan. Paket couple: ${m.couple.map((c) => `${c.type} ${c.price}`).join(" dan ")}.` },
+  { tags: ["membership", "personal-trainer", "faq"], q: "Apakah ada harga khusus mahasiswa?",
+    a: `Ada. Membership Student ${m.single[1].oneMonth} untuk 1 bulan dan ${m.single[1].threeMonth} untuk 3 bulan, paket ${m.couple[0].type} ${m.couple[0].price}, dan Personal Trainer segmen ${t0.rows[0].segment} mulai ${t0.rows[0].prices[0]} (${t0.name} ${t0.cols[0].toLowerCase()}).` },
+  { tags: ["membership", "faq"], q: "Berapa harga visit gym harian?",
+    a: `Visit gym ${site.visitGym.price}. ${site.visitGym.copy} Untuk ketentuan visit, tanyakan lewat WhatsApp ${b.whatsappDisplay}.` },
+  { tags: ["kelas", "faq"], q: "Kelas apa saja yang ada dan berapa harganya?",
+    a: site.classes.map((c) => `${c.name} ${c.price}`).join("; ") + "." },
+  { tags: ["kelas", "faq"], q: "Bagaimana jadwal kelas mingguan?",
+    a: `${dayText}. ${site.scheduleNote}` },
+  { tags: ["personal-trainer", "faq"], q: "Apakah ada Personal Trainer di Wellness Gym?",
+    a: `Ada. Paket ${ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()})`).join(", ")}, harga mulai ${idr(minPT)}. Tersedia untuk segmen ${t0.rows.map((r) => r.segment.toLowerCase()).join(" dan ")}.` },
+  { tags: ["personal-trainer", "faq"], q: "Bagaimana cara booking Personal Trainer?",
+    a: `Booking lewat ${site.ptBookingUrl.replace("https://", "")}. Untuk konsultasi paket yang sesuai, hubungi WhatsApp ${b.whatsappDisplay}.` },
+  { tags: ["personal-trainer", "faq"], q: "Apa beda paket Entry, Core, dan Premium?",
+    a: ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()}): ${t.includes.join(", ").toLowerCase()}`).join(". ") + "." },
+  { tags: ["fasilitas", "faq"], q: "Fasilitas apa saja yang tersedia?",
+    a: site.facilities.map((f) => f.name).join(", ") + "." },
+  { tags: ["fasilitas", "faq"], q: "Apakah ada instruktur gym?",
+    a: `Ada. ${site.whyUs.points[3].desc} ${instrFac} termasuk dalam fasilitas.` },
+  { tags: ["lokasi", "faq"], q: "Jam buka Wellness Gym kapan?",
+    a: b.hours.map((h) => `${h.days} pukul ${h.time}`).join(", ") + "." },
+  { tags: ["lokasi", "faq"], q: "Di mana lokasi Wellness Gym?",
+    a: `${b.address}. Gym ini berada di Purwokerto Utara, Kabupaten Banyumas.` },
+  { tags: ["faq"], q: "Bagaimana ulasan Wellness Gym?",
+    a: `Rating ${site.socialProof.rating}.` }
+];
+const faqsFor = (key) => faqs.filter((f) => f.tags.includes(key));
+
+// ---------- Section renderers ----------
+// o.h: show the visible heading; o.more: link to the dedicated page (home only)
+const more = (href) => `<a class="more" href="${u(href)}">Selengkapnya</a>`;
+function sectionHead(id, title, aside, o) {
+  if (!o.h) return `<h2 class="sr-only" id="${id}-title">${title}</h2>`;
+  return `<header class="sec__head">
+    <h2 class="sec__title" data-split id="${id}-title">${title}</h2>
+    <div class="sec__aside">${o.more ? more(o.more) : ""}${aside}</div>
+  </header>`;
+}
+
+const membershipSec = (o) => `<section class="sec" id="membership" aria-labelledby="membership-title">
+  ${sectionHead("membership", "Membership", waBtn(m.waMessage, "Tanya Membership", "line"), o)}
+  <div class="bento">
+    ${m.single.map((x) => `<article class="tile tile--single" data-spot>
+      <h3 class="tile__title">${esc(x.type)}</h3>
+      <dl class="prices">
+        <div><dt>1 Bulan</dt><dd class="num" data-count="${priceNum(x.oneMonth)}">${esc(x.oneMonth)}</dd></div>
+        <div><dt>3 Bulan</dt><dd class="num" data-count="${priceNum(x.threeMonth)}">${esc(x.threeMonth)}</dd></div>
+      </dl>
+    </article>`).join("\n    ")}
+    <article class="tile tile--couple" data-spot>
+      <h3 class="tile__title">Couple</h3>
+      <dl class="prices prices--row">
+        ${m.couple.map((c) => `<div><dt>${esc(c.type)}</dt><dd class="num">${esc(c.price)}</dd></div>`).join("\n        ")}
+      </dl>
+    </article>
+    <article class="tile tile--visit" id="visit" data-spot>
+      <h3 class="tile__title">Visit Gym</h3>
+      <p class="num tile__big">${esc(site.visitGym.price)}</p>
+      <p class="tile__copy">${esc(site.visitGym.copy)}</p>
+      ${waBtn(site.visitGym.waMessage, "Coba Visit Gym", "dark")}
+    </article>
+  </div>
+</section>`;
+
+const facilitiesSec = (o) => `<section class="sec" id="facilities" aria-labelledby="facilities-title">
+  ${sectionHead("facilities", "Fasilitas", "", o)}
+  <ul class="fac">
+    ${site.facilities.map((f, i) => `<li class="fac__item fac__item--${i < 2 ? "big" : "small"}" data-spot>
+      <div class="fac__media">${facilityMedia(f)}</div>
+      <h3>${esc(f.name)}</h3>
+    </li>`).join("\n    ")}
+  </ul>
+</section>`;
+
+const ribbonSec = () => `<div class="ribbon" aria-label="Galeri foto Wellness Gym">
+  <ul class="ribbon__track">
+    ${site.ribbon.map((k) => `<li class="ribbon__item ribbon__item--${P[k].h > P[k].w ? "tall" : "wide"}">${photo(k, "ribbon__img", "(max-width: 767px) 70vw, 32vw")}</li>`).join("\n    ")}
+  </ul>
+</div>`;
+
+const classesSec = (o) => `<section class="sec" id="classes" aria-labelledby="classes-title">
+  ${sectionHead("classes", "Kelas", waBtn(site.scheduleWaMessage, "Tanya Jadwal", "line"), o)}
+  <figure class="classes__banner">${photo(site.classesPhoto, "classes__img", "(max-width: 767px) 100vw, 88rem")}</figure>
+  <ul class="classes">
+    ${site.classes.map((c) => `<li class="class-row">
+      <h3>${esc(c.name)}</h3>
+      <p class="num">${esc(c.price)}</p>
+    </li>`).join("\n    ")}
+  </ul>
+</section>`;
+
+const scheduleSec = (o) => `<section class="sec" id="schedule" aria-labelledby="schedule-title">
+  ${sectionHead("schedule", "Jadwal mingguan", waBtn(site.scheduleWaMessage, "Tanya Jadwal Terbaru", "line"), o)}
+  <div class="week" tabindex="0" role="group" aria-label="Jadwal kelas per hari">
+    ${days.map((d) => `<section class="week__day" aria-labelledby="d-${d}">
+      <h3 id="d-${d}">${esc(d)}</h3>
+      <ul>${site.schedule.filter((s) => s.day === d).map((s) => `<li><time class="num">${esc(s.time)}</time><span>${esc(s.cls)}</span></li>`).join("")}</ul>
+    </section>`).join("\n    ")}
+  </div>
+  <p class="note">${esc(site.scheduleNote)}</p>
+</section>`;
+
+const spin = () => `<a class="spin" href="${site.ptBookingUrl}" ${ext} data-cursor="Booking">
+      <svg viewBox="0 0 200 200" class="spin__ring" aria-hidden="true"><defs><path id="ring" d="M100 100m-76 0a76 76 0 1 1 152 0a76 76 0 1 1-152 0"/></defs><text><textPath href="#ring">Booking Personal Trainer · xnkbooking.my.id · </textPath></text></svg>
+      <span class="spin__core">${arrow}</span>
+      <span class="sr-only">Booking Personal Trainer di xnkbooking.my.id</span>
+    </a>`;
+
+const ptSec = (o) => `<section class="sec pt" id="personal-trainer" aria-labelledby="pt-title">
+  ${sectionHead("pt", "Personal Trainer", spin(), o)}
+  <div class="stack">
+    ${ptTiers.map((t, i) => `<article class="tier" style="--i:${i}">
+      <div class="tier__info">
+        <h3 class="tier__name">${esc(t.name)}</h3>
+        <p class="tier__sub">${esc(t.subtitle)}</p>
+        <ul class="tier__inc">${t.includes.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      </div>
+      <table class="tier__table">
+        <caption class="sr-only">Harga ${esc(t.name)} — ${esc(t.subtitle)}</caption>
+        <thead><tr><th scope="col">Paket</th>${t.rows.map((r) => `<th scope="col">${esc(r.segment)}</th>`).join("")}</tr></thead>
+        <tbody>${t.cols.map((c, ci) => `<tr><th scope="row">${esc(c)}</th>${t.rows.map((r) => `<td class="num">${esc(r.prices[ci])}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+    </article>`).join("\n    ")}
+  </div>
+  <div class="pt__cta">
+    ${btn(site.ptBookingUrl, "Booking Personal Trainer", "gold", ext + ' data-cursor="Booking"')}
+    ${waBtn(site.personalTrainer.waMessage, "Konsultasi via WhatsApp", "line")}
+  </div>
+</section>`;
+
+const reviewsSec = () => `<section class="sec reviews" id="reviews" aria-labelledby="reviews-title">
+  <header class="reviews__head">
+    <h2 class="sr-only" id="reviews-title">Ulasan Google</h2>
+    <p class="rating"><span class="rating__n" data-count="${b.rating}" data-decimals="1">${b.rating}</span><span class="rating__meta">${esc(site.socialProof.rating)}</span></p>
+  </header>
+  <ul class="wall">
+    ${site.socialProof.testimonials.map((t, i) => `<li class="wall__item wall__item--${i}">
+      <blockquote><p>&ldquo;${esc(t.text)}&rdquo;</p></blockquote>
+      <p class="wall__by">${esc(t.name)} <span>Google Review</span></p>
+    </li>`).join("\n    ")}
+  </ul>
+</section>`;
+
+const locationSec = (o) => `<section class="sec loc" id="location" aria-labelledby="location-title">
+  <div class="loc__info">
+    ${o.h ? `<h2 class="sec__title" data-split id="location-title">Lokasi &amp; jam buka</h2>${o.more ? more(o.more) : ""}` : `<h2 class="sr-only" id="location-title">Alamat dan jam buka</h2>`}
+    <button class="copy" type="button" data-copy="${esc(b.address)}">
+      <span class="copy__text">${esc(b.address)}</span>
+      <span class="copy__hint">Ketuk untuk salin alamat</span>
+    </button>
+    <p class="toast" role="status" aria-live="polite"></p>
+    <dl class="hours">
+      ${b.hours.map((h) => `<div><dt>${esc(h.days)}</dt><dd class="num">${esc(h.time)}</dd></div>`).join("\n      ")}
+    </dl>
+    <div class="loc__ctas">
+      ${btn(b.mapsDirectionsUrl, "Dapatkan Arah", "gold", ext)}
+      ${waBtn(site.waGeneralMessage, "Chat WhatsApp", "line")}
+    </div>
+  </div>
+  <div class="loc__map">
+    <iframe src="${esc(b.mapsEmbedUrl)}" title="Peta lokasi Wellness Gym" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>
+</section>`;
+
+const finalSec = () => `<section class="final" id="mulai" aria-labelledby="final-title">
+  <h2 class="final__title" id="final-title"><span class="final__a">Sudah siap</span> <span class="final__mask" style="--img:url('${u(heroP.src)}')">mulai latihan?</span></h2>
+  <p class="final__copy">${esc(site.finalCta.copy)}</p>
+  <div class="hero__ctas">
+    ${waBtn(site.waGeneralMessage)}
+    ${btn(membershipHref(), "Lihat Membership", "line")}
+  </div>
+  <p class="final__contact">WhatsApp <a class="num" href="${esc(waLink(site.waGeneralMessage))}" ${ext}>${esc(site.finalCta.contact)}</a> · <a href="${u("faq/")}">Pertanyaan umum</a></p>
+</section>`;
+
+const faqSec = (key, title, openFirst) => {
+  const list = faqsFor(key);
+  return `<section class="sec faq" id="faq-list" aria-labelledby="faq-title">
+  ${openFirst ? `<h2 class="sr-only" id="faq-title">${esc(title)}</h2>` : `<header class="sec__head"><h2 class="sec__title" data-split id="faq-title">${esc(title)}</h2></header>`}
+  <div class="faq__list">
+    ${list.map((f, i) => `<details class="faq__item"${openFirst && i === 0 ? " open" : ""}><summary><h3>${esc(f.q)}</h3><span class="faq__icon" aria-hidden="true"></span></summary><p>${esc(f.a)}</p></details>`).join("\n    ")}
+  </div>
+</section>`;
 };
 
-const html = `<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>${esc(site.seo.title)}</title>
-<meta name="description" content="${esc(site.seo.description)}">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="author" content="${esc(b.name)}">
-<meta name="geo.region" content="ID-JT">
-<meta name="geo.placename" content="Purwokerto">
-<link rel="alternate" hreflang="id" href="${site.url}">
-<link rel="alternate" hreflang="x-default" href="${site.url}">
-<meta name="theme-color" content="#0d0b12">
-<link rel="canonical" href="${site.url}">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="id_ID">
-<meta property="og:site_name" content="${esc(b.name)}">
-<meta property="og:url" content="${site.url}">
-<meta property="og:title" content="${esc(site.seo.title)}">
-<meta property="og:description" content="${esc(site.seo.description)}">
-<meta property="og:image" content="${site.url}og-image.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Wellness Gym Purwokerto, area latihan dengan alat beban hitam-ungu">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${esc(site.seo.title)}">
-<meta name="twitter:description" content="${esc(site.seo.description)}">
-<meta name="twitter:image" content="${site.url}og-image.png">
-<meta name="twitter:image:alt" content="Wellness Gym Purwokerto, area latihan dengan alat beban hitam-ungu">
-<link rel="icon" href="favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="manifest" href="site.webmanifest">
-<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap"></noscript>
-<link rel="preload" as="image" href="${heroP.src}" imagesrcset="${heroP.small} 640w, ${heroP.src} ${heroP.w}w" imagesizes="100vw">
-<link rel="stylesheet" href="styles.css">
-<script>
-  // Motion only arms when JS runs; if scripts fail to load, everything stays visible.
-  // "pending" hides only the hero copy until the intro takes over; always released after 3s.
-  (function (d) {
-    d.classList.add("js");
-    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) d.classList.add("pending");
-    setTimeout(function () { d.classList.remove("pending"); if (!window.__wg) d.classList.remove("js"); }, 3000);
-  })(document.documentElement);
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js" defer></script>
-<script src="script.js" defer></script>
-<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
-</head>
-<body>
-<a class="skip" href="#main">Lewati ke konten utama</a>
-<div class="cursor" aria-hidden="true"><span class="cursor__label"></span></div>
+// ---------- Page definitions ----------
+const pages = [
+  { key: "home", path: "", nav: null, title: site.seo.title, desc: site.seo.description },
+  {
+    key: "membership", path: "membership/", nav: "Membership", crumb: "Membership",
+    title: "Membership Wellness Gym Purwokerto | General, Student, Couple",
+    desc: `Harga membership Wellness Gym Purwokerto: General ${m.single[0].oneMonth} per bulan, Student ${m.single[1].oneMonth}, paket couple, dan visit gym ${site.visitGym.price}.`,
+    h1: "Membership gym di Purwokerto",
+    intro: `Pilih membership General atau Student untuk 1 atau 3 bulan, atau paket couple. Belum yakin? Coba dulu lewat visit gym ${site.visitGym.price}.`,
+    short: `General, Student, Couple, dan visit gym ${site.visitGym.price}`,
+    related: ["kelas", "personal-trainer", "lokasi"],
+    ctas: () => waBtn(m.waMessage, "Tanya Membership") + waBtn(site.visitGym.waMessage, "Coba Visit Gym", "line"),
+    body: () => membershipSec({ h: false }) + faqSec("membership", "Pertanyaan tentang membership"),
+    images: []
+  },
+  {
+    key: "kelas", path: "kelas/", nav: "Kelas", crumb: "Kelas",
+    title: "Kelas & Jadwal Wellness Gym Purwokerto | Zumba, Yoga, Aerobic",
+    desc: `Jadwal kelas mingguan Wellness Gym Purwokerto: ${classNames.join(", ")}. Harga mulai ${idr(minClass)} per kedatangan. Jadwal bisa berubah.`,
+    h1: "Kelas & jadwal mingguan",
+    intro: `Kelas ${classNames.join(", ")} dengan harga mulai ${idr(minClass)} per kedatangan. ${site.scheduleNote}`,
+    short: `${classNames.join(", ")} dan jadwal mingguan`,
+    related: ["membership", "personal-trainer", "fasilitas"],
+    ctas: () => waBtn(site.scheduleWaMessage, "Tanya Jadwal Terbaru") + btn(u("membership/"), "Lihat Membership", "line"),
+    body: () => classesSec({ h: false }) + scheduleSec({ h: true }) + faqSec("kelas", "Pertanyaan tentang kelas"),
+    images: ["classesPhoto"]
+  },
+  {
+    key: "personal-trainer", path: "personal-trainer/", nav: "Personal Trainer", crumb: "Personal Trainer",
+    title: "Personal Trainer Purwokerto | Paket Entry, Core, Premium",
+    desc: `Paket Personal Trainer Wellness Gym Purwokerto: Entry, Core, Premium untuk mahasiswa dan umum, mulai ${idr(minPT)}. Booking lewat xnkbooking.my.id.`,
+    h1: "Personal Trainer di Purwokerto",
+    intro: `Tiga paket: ${ptTiers.map((t) => `${t.name} (${t.subtitle.toLowerCase()})`).join(", ")}. Harga mulai ${idr(minPT)}. Booking lewat xnkbooking.my.id.`,
+    short: `Paket ${ptTiers.map((t) => t.name[0] + t.name.slice(1).toLowerCase()).join(", ")}, booking online`,
+    related: ["membership", "kelas", "faq"],
+    ctas: () => btn(site.ptBookingUrl, "Booking PT", "gold", ext + ' data-cursor="Booking"') + waBtn(site.personalTrainer.waMessage, "Konsultasi PT", "line"),
+    body: () => ptSec({ h: false }) + faqSec("personal-trainer", "Pertanyaan tentang Personal Trainer"),
+    images: []
+  },
+  {
+    key: "fasilitas", path: "fasilitas/", nav: "Fasilitas", crumb: "Fasilitas",
+    title: "Fasilitas Gym Purwokerto | WiFi, Shower, Locker, Instruktur",
+    desc: `Fasilitas Wellness Gym Purwokerto: ${site.facilities.map((f) => f.name).join(", ")}.`,
+    h1: "Fasilitas gym",
+    intro: `${site.facilities.map((f) => f.name).join(", ")}. ${site.whyUs.points[1].desc}`,
+    short: site.facilities.map((f) => f.name.replace(/^(Free|Tersedia) /, "")).join(", "),
+    related: ["kelas", "membership", "lokasi"],
+    ctas: () => waBtn(site.waGeneralMessage) + btn(u("membership/"), "Lihat Membership", "line"),
+    body: () => facilitiesSec({ h: false }) + ribbonSec() + faqSec("fasilitas", "Pertanyaan tentang fasilitas"),
+    images: [...new Set([...site.facilities.map((f) => f.photo).filter(Boolean), ...site.ribbon])]
+  },
+  {
+    key: "lokasi", path: "lokasi/", nav: "Lokasi", crumb: "Lokasi",
+    title: "Lokasi & Jam Buka Wellness Gym | Purwokerto Utara",
+    desc: `Wellness Gym di Jl. Jatisari No.24, Karangmiri, Sumampir, Purwokerto Utara. Buka ${hoursText}. Petunjuk arah dan WhatsApp.`,
+    h1: "Lokasi & jam buka",
+    intro: `${b.address}. Buka ${hoursText}.`,
+    short: `Jl. Jatisari No.24, Purwokerto Utara. ${hoursText}`,
+    related: ["membership", "kelas", "faq"],
+    ctas: () => btn(b.mapsDirectionsUrl, "Dapatkan Arah", "gold", ext) + waBtn(site.waGeneralMessage, "Chat WhatsApp", "line"),
+    body: () => locationSec({ h: false }) + faqSec("lokasi", "Pertanyaan tentang lokasi"),
+    images: []
+  },
+  {
+    key: "faq", path: "faq/", nav: "FAQ", crumb: "FAQ",
+    title: "FAQ Wellness Gym Purwokerto | Harga, Jadwal, Lokasi",
+    desc: "Jawaban singkat tentang harga membership, visit gym, kelas, Personal Trainer, jam buka, dan lokasi Wellness Gym Purwokerto.",
+    h1: "Pertanyaan umum",
+    intro: "Jawaban singkat tentang harga, jadwal kelas, Personal Trainer, jam buka, dan lokasi. Tidak menemukan jawabannya? Tanya langsung lewat WhatsApp.",
+    short: "Harga, jadwal, Personal Trainer, jam buka, lokasi",
+    related: ["membership", "kelas", "personal-trainer"],
+    ctas: () => waBtn(site.waGeneralMessage, "Tanya via WhatsApp") + btn(u("membership/"), "Lihat Membership", "line"),
+    body: () => faqSec("faq", "Semua pertanyaan", true),
+    images: []
+  }
+];
+const pageByKey = Object.fromEntries(pages.map((p) => [p.key, p]));
+const pageUrl = (p) => site.url + p.path;
 
-<header class="nav" id="nav">
-  <a class="nav__brand" href="#top" aria-label="Wellness Gym, ke atas">${logo("nav__logo")}<span>Wellness Gym</span></a>
-  <nav class="nav__links" aria-label="Navigasi utama">${navLinks}</nav>
-  ${waBtn(site.waGeneralMessage, "Chat WhatsApp", "gold btn--sm nav__cta")}
-  <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="menu"><span class="nav__toggle-text">Menu</span></button>
-</header>
-<nav class="menu" id="menu" aria-label="Navigasi mobile" hidden>
-  <div class="menu__links">${navLinks}</div>
-  ${waBtn(site.waGeneralMessage)}
-  <p class="menu__meta">${esc(b.address)}</p>
-</nav>
+const navLinks = (cur) => pages.filter((p) => p.nav).map((p) => `<a href="${u(p.path)}"${p.key === cur ? ' aria-current="page"' : ""}>${p.nav}</a>`).join("");
 
-<main id="main">
+const pageHead = (p) => `<header class="phead">
+  <div class="phead__in">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="${u("")  || "./"}">Beranda</a><span aria-hidden="true">/</span><span aria-current="page">${esc(p.crumb)}</span></nav>
+    <h1 class="phead__title" data-split>${esc(p.h1)}</h1>
+    <p class="phead__intro">${esc(p.intro)}</p>
+    <div class="hero__ctas">${p.ctas()}</div>
+  </div>
+</header>`;
 
-<section class="hero" id="top" aria-labelledby="hero-title">
+const related = (p) => `<section class="sec related" aria-labelledby="rel-title">
+  <h2 class="rel__title" id="rel-title">Lihat juga</h2>
+  <ul class="rel">
+    ${p.related.map((k) => `<li><a href="${u(pageByKey[k].path)}"><span class="rel__name">${esc(pageByKey[k].nav)}</span><span class="rel__desc">${esc(pageByKey[k].short)}</span>${arrow}</a></li>`).join("\n    ")}
+  </ul>
+</section>`;
+
+// ---------- Home body ----------
+const homeBody = () => `<section class="hero" id="top" aria-labelledby="hero-title">
   <div class="hero__frame">
     ${photo(site.hero.photo, "hero__img", "100vw", true)}
     <div class="hero__shade" aria-hidden="true"></div>
@@ -239,167 +395,165 @@ const html = `<!DOCTYPE html>
   <div class="why__pin">
     <h2 class="why__title" id="why-title" data-scrub>${esc(site.whyUs.headline)}</h2>
     <ol class="why__track">
-      ${site.whyUs.points.map((p, i) => {
+      ${site.whyUs.points.map((pt, i) => {
         const media = site.whyPhotos[i] ? photo(site.whyPhotos[i], "why__img", "(max-width: 600px) 100vw, 44rem") : "";
         const mg = media ? "" : `<div class="why__mg" aria-hidden="true">${icons[["breath", "", "orbit", "coach"][i]]}</div>`;
-        return `<li class="why__card${media ? " why__card--photo" : ""}">${media}${mg}<div class="why__body"><span class="why__n" aria-hidden="true">0${i + 1}</span><h3>${esc(p.title)}</h3><p>${esc(p.desc)}</p></div></li>`;
+        return `<li class="why__card${media ? " why__card--photo" : ""}">${media}${mg}<div class="why__body"><span class="why__n" aria-hidden="true">0${i + 1}</span><h3>${esc(pt.title)}</h3><p>${esc(pt.desc)}</p></div></li>`;
       }).join("\n      ")}
     </ol>
   </div>
 </section>
 
-<section class="sec" id="membership" aria-labelledby="membership-title">
-  <header class="sec__head">
-    <h2 class="sec__title" data-split id="membership-title">Membership</h2>
-    ${waBtn(site.membership.waMessage, "Tanya Membership", "line")}
-  </header>
-  <div class="bento">
-    ${site.membership.single.map((m) => `<article class="tile tile--single" data-spot>
-      <h3 class="tile__title">${esc(m.type)}</h3>
-      <dl class="prices">
-        <div><dt>1 Bulan</dt><dd class="num" data-count="${priceNum(m.oneMonth)}">${esc(m.oneMonth)}</dd></div>
-        <div><dt>3 Bulan</dt><dd class="num" data-count="${priceNum(m.threeMonth)}">${esc(m.threeMonth)}</dd></div>
-      </dl>
-    </article>`).join("\n    ")}
-    <article class="tile tile--couple" data-spot>
-      <h3 class="tile__title">Couple</h3>
-      <dl class="prices prices--row">
-        ${site.membership.couple.map((c) => `<div><dt>${esc(c.type)}</dt><dd class="num">${esc(c.price)}</dd></div>`).join("\n        ")}
-      </dl>
-    </article>
-    <article class="tile tile--visit" id="visit" data-spot>
-      <h3 class="tile__title">Visit Gym</h3>
-      <p class="num tile__big">${esc(site.visitGym.price)}</p>
-      <p class="tile__copy">${esc(site.visitGym.copy)}</p>
-      ${waBtn(site.visitGym.waMessage, "Coba Visit Gym", "dark")}
-    </article>
-  </div>
-</section>
+${membershipSec({ h: true, more: "membership/" })}
 
-<section class="sec" id="facilities" aria-labelledby="facilities-title">
-  <header class="sec__head"><h2 class="sec__title" data-split id="facilities-title">Fasilitas</h2></header>
-  <ul class="fac">
-    ${site.facilities.map((f, i) => `<li class="fac__item fac__item--${i < 2 ? "big" : "small"}" data-spot>
-      <div class="fac__media">${facilityMedia(f)}</div>
-      <h3>${esc(f.name)}</h3>
-    </li>`).join("\n    ")}
-  </ul>
-</section>
+${facilitiesSec({ h: true, more: "fasilitas/" })}
 
-<div class="ribbon" aria-label="Galeri foto Wellness Gym">
-  <ul class="ribbon__track">
-    ${site.ribbon.map((k, i) => `<li class="ribbon__item ribbon__item--${P[k].h > P[k].w ? "tall" : "wide"}">${photo(k, "ribbon__img", "(max-width: 767px) 70vw, 32vw")}</li>`).join("\n    ")}
-  </ul>
-</div>
+${ribbonSec()}
 
-<section class="sec" id="classes" aria-labelledby="classes-title">
-  <header class="sec__head">
-    <h2 class="sec__title" data-split id="classes-title">Kelas</h2>
-    ${waBtn(site.scheduleWaMessage, "Tanya Jadwal", "line")}
-  </header>
-  <figure class="classes__banner">${photo(site.classesPhoto, "classes__img", "(max-width: 767px) 100vw, 88rem")}</figure>
-  <ul class="classes">
-    ${site.classes.map((c) => `<li class="class-row">
-      <h3>${esc(c.name)}</h3>
-      <p class="num">${esc(c.price)}</p>
-    </li>`).join("\n    ")}
-  </ul>
-</section>
+${classesSec({ h: true, more: "kelas/" })}
 
-<section class="sec" id="schedule" aria-labelledby="schedule-title">
-  <header class="sec__head">
-    <h2 class="sec__title" data-split id="schedule-title">Jadwal mingguan</h2>
-    ${waBtn(site.scheduleWaMessage, "Tanya Jadwal Terbaru", "line")}
-  </header>
-  <div class="week" tabindex="0" aria-label="Jadwal kelas per hari">
-    ${days.map((d) => `<section class="week__day" aria-labelledby="d-${d}">
-      <h3 id="d-${d}">${esc(d)}</h3>
-      <ul>${site.schedule.filter((s) => s.day === d).map((s) => `<li><time class="num">${esc(s.time)}</time><span>${esc(s.cls)}</span></li>`).join("")}</ul>
-    </section>`).join("\n    ")}
-  </div>
-  <p class="note">${esc(site.scheduleNote)}</p>
-</section>
+${scheduleSec({ h: true })}
 
-<section class="sec pt" id="personal-trainer" aria-labelledby="pt-title">
-  <header class="sec__head">
-    <h2 class="sec__title" data-split id="pt-title">Personal Trainer</h2>
-    <a class="spin" href="${site.ptBookingUrl}" ${ext} data-cursor="Booking">
-      <svg viewBox="0 0 200 200" class="spin__ring" aria-hidden="true"><defs><path id="ring" d="M100 100m-76 0a76 76 0 1 1 152 0a76 76 0 1 1-152 0"/></defs><text><textPath href="#ring">Booking Personal Trainer · xnkbooking.my.id · </textPath></text></svg>
-      <span class="spin__core">${arrow}</span>
-      <span class="sr-only">Booking Personal Trainer di xnkbooking.my.id</span>
-    </a>
-  </header>
-  <div class="stack">
-    ${site.personalTrainer.tiers.map((t, i) => `<article class="tier" style="--i:${i}">
-      <div class="tier__info">
-        <h3 class="tier__name">${esc(t.name)}</h3>
-        <p class="tier__sub">${esc(t.subtitle)}</p>
-        <ul class="tier__inc">${t.includes.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-      </div>
-      <table class="tier__table">
-        <caption class="sr-only">Harga ${esc(t.name)} — ${esc(t.subtitle)}</caption>
-        <thead><tr><th scope="col">Paket</th>${t.rows.map((r) => `<th scope="col">${esc(r.segment)}</th>`).join("")}</tr></thead>
-        <tbody>${t.cols.map((c, ci) => `<tr><th scope="row">${esc(c)}</th>${t.rows.map((r) => `<td class="num">${esc(r.prices[ci])}</td>`).join("")}</tr>`).join("")}</tbody>
-      </table>
-    </article>`).join("\n    ")}
-  </div>
-  <div class="pt__cta">
-    ${btn(site.ptBookingUrl, "Booking Personal Trainer", "gold", ext + ' data-cursor="Booking"')}
-    ${waBtn(site.personalTrainer.waMessage, "Konsultasi via WhatsApp", "line")}
-  </div>
-</section>
+${ptSec({ h: true, more: "personal-trainer/" })}
 
-<section class="sec reviews" id="reviews" aria-labelledby="reviews-title">
-  <header class="reviews__head">
-    <h2 class="sr-only" id="reviews-title">Ulasan Google</h2>
-    <p class="rating"><span class="rating__n" data-count="${b.rating}" data-decimals="1">${b.rating}</span><span class="rating__meta">${esc(site.socialProof.rating)}</span></p>
-  </header>
-  <ul class="wall">
-    ${site.socialProof.testimonials.map((t, i) => `<li class="wall__item wall__item--${i}">
-      <blockquote><p>&ldquo;${esc(t.text)}&rdquo;</p></blockquote>
-      <p class="wall__by">${esc(t.name)} <span>Google Review</span></p>
-    </li>`).join("\n    ")}
-  </ul>
-</section>
+${reviewsSec()}
 
-<section class="sec faq" id="faq" aria-labelledby="faq-title">
-  <header class="sec__head"><h2 class="sec__title" data-split id="faq-title">Pertanyaan umum</h2></header>
-  <div class="faq__list">
-    ${faqs.map(([q, a], i) => `<details class="faq__item"${i === 0 ? " open" : ""}><summary><h3>${esc(q)}</h3><span class="faq__icon" aria-hidden="true"></span></summary><p>${esc(a)}</p></details>`).join("\n    ")}
-  </div>
-</section>
+${locationSec({ h: true, more: "lokasi/" })}
 
-<section class="sec loc" id="location" aria-labelledby="location-title">
-  <div class="loc__info">
-    <h2 class="sec__title" data-split id="location-title">Lokasi &amp; jam buka</h2>
-    <button class="copy" type="button" data-copy="${esc(b.address)}">
-      <span class="copy__text">${esc(b.address)}</span>
-      <span class="copy__hint">Ketuk untuk salin alamat</span>
-    </button>
-    <p class="toast" role="status" aria-live="polite"></p>
-    <dl class="hours">
-      ${b.hours.map((h) => `<div><dt>${esc(h.days)}</dt><dd class="num">${esc(h.time)}</dd></div>`).join("\n      ")}
-    </dl>
-    <div class="loc__ctas">
-      ${btn(b.mapsDirectionsUrl, "Dapatkan Arah", "gold", ext)}
-      ${waBtn(site.waGeneralMessage, "Chat WhatsApp", "line")}
-    </div>
-  </div>
-  <div class="loc__map">
-    <iframe src="${esc(b.mapsEmbedUrl)}" title="Peta lokasi Wellness Gym" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-  </div>
-</section>
+${finalSec()}`;
 
-<section class="final" id="mulai" aria-labelledby="final-title">
-  <h2 class="final__title" id="final-title"><span class="final__a">Sudah siap</span> <span class="final__mask" style="--img:url('${heroP.src}')">mulai latihan?</span></h2>
-  <p class="final__copy">${esc(site.finalCta.copy)}</p>
-  <div class="hero__ctas">
-    ${waBtn(site.waGeneralMessage)}
-    ${btn("#membership", "Lihat Membership", "line")}
-  </div>
-  <p class="final__contact">WhatsApp <a class="num" href="${esc(waLink(site.waGeneralMessage))}" ${ext}>${esc(site.finalCta.contact)}</a></p>
-</section>
+// ---------- JSON-LD ----------
+const gymId = site.url + "#gym";
+const gymNode = {
+  "@type": "ExerciseGym", "@id": gymId,
+  name: b.name, slogan: b.tagline, description: site.seo.description, url: site.url,
+  image: [site.url + "og-image.png", site.url + heroP.src, site.url + P.instructor.src, site.url + P.dumbbell.src],
+  logo: site.url + "logo.png",
+  telephone: b.telephone,
+  priceRange: `${idr(Math.min(...prices))} - ${idr(Math.max(...prices))}`,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Jl. Jatisari No.24, Karangmiri, Sumampir",
+    addressLocality: "Purwokerto Utara",
+    addressRegion: "Jawa Tengah",
+    postalCode: "53125",
+    addressCountry: "ID"
+  },
+  areaServed: { "@type": "City", name: "Purwokerto" },
+  hasMap: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(b.address),
+  openingHoursSpecification: [
+    { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "06:00", closes: "21:00" },
+    { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "06:00", closes: "12:00" }
+  ],
+  amenityFeature: site.facilities.map((f) => ({ "@type": "LocationFeatureSpecification", name: f.name, value: true })),
+  hasOfferCatalog: { "@type": "OfferCatalog", name: "Harga Wellness Gym", itemListElement: offers },
+  sameAs: [b.instagramUrl, b.tiktokUrl]
+};
+const webSite = { "@type": "WebSite", "@id": site.url + "#website", url: site.url, name: b.name, inLanguage: "id-ID", publisher: { "@id": gymId } };
 
+function jsonLd(p) {
+  const url = pageUrl(p);
+  const webPage = {
+    "@type": "WebPage", "@id": url + "#webpage", url, name: p.title, description: p.desc, inLanguage: "id-ID",
+    isPartOf: { "@id": site.url + "#website" }, about: { "@id": gymId },
+    primaryImageOfPage: { "@type": "ImageObject", url: site.url + "og-image.png", width: 1200, height: 630 },
+    ...(p.key !== "home" && { breadcrumb: { "@id": url + "#breadcrumb" } })
+  };
+  if (p.key === "home") return { "@context": "https://schema.org", "@graph": [webSite, webPage, gymNode] };
+  const list = faqsFor(p.key);
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      webPage,
+      { "@type": "BreadcrumbList", "@id": url + "#breadcrumb", itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Beranda", item: site.url },
+        { "@type": "ListItem", position: 2, name: p.crumb, item: url }
+      ] },
+      { "@type": "FAQPage", "@id": url + "#faq", inLanguage: "id-ID", mainEntity: list.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }
+    ]
+  };
+}
+
+// ---------- Layout ----------
+function layout(p, body) {
+  const url = pageUrl(p);
+  const ogAlt = "Wellness Gym Purwokerto, area latihan dengan alat beban hitam-ungu";
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${esc(p.title)}</title>
+<meta name="description" content="${esc(p.desc)}">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="author" content="${esc(b.name)}">
+<meta name="geo.region" content="ID-JT">
+<meta name="geo.placename" content="Purwokerto">
+<meta name="theme-color" content="#0d0b12">
+<link rel="canonical" href="${url}">
+<link rel="alternate" hreflang="id" href="${url}">
+<link rel="alternate" hreflang="x-default" href="${url}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="id_ID">
+<meta property="og:site_name" content="${esc(b.name)}">
+<meta property="og:url" content="${url}">
+<meta property="og:title" content="${esc(p.title)}">
+<meta property="og:description" content="${esc(p.desc)}">
+<meta property="og:image" content="${site.url}og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${ogAlt}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(p.title)}">
+<meta name="twitter:description" content="${esc(p.desc)}">
+<meta name="twitter:image" content="${site.url}og-image.png">
+<meta name="twitter:image:alt" content="${ogAlt}">
+<link rel="icon" href="${u("favicon.ico")}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="${u("favicon-32x32.png")}">
+<link rel="icon" type="image/png" sizes="16x16" href="${u("favicon-16x16.png")}">
+<link rel="apple-touch-icon" href="${u("apple-touch-icon.png")}">
+<link rel="manifest" href="${u("site.webmanifest")}">
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&f[]=satoshi@400,500,700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap"></noscript>
+${HOME ? `<link rel="preload" as="image" href="${heroP.src}" imagesrcset="${heroP.small} 640w, ${heroP.src} ${heroP.w}w" imagesizes="100vw">\n` : ""}<link rel="stylesheet" href="${u("styles.css")}">
+<script>
+  // Motion only arms when JS runs; if scripts fail to load, everything stays visible.
+  // "pending" hides only the hero copy until the intro takes over; always released after 3s.
+  (function (d) {
+    d.classList.add("js");
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) d.classList.add("pending");
+    setTimeout(function () { d.classList.remove("pending"); if (!window.__wg) d.classList.remove("js"); }, 3000);
+  })(document.documentElement);
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js" defer></script>
+<script src="${u("script.js")}" defer></script>
+<script type="application/ld+json">${JSON.stringify(jsonLd(p))}</script>
+</head>
+<body class="${HOME ? "is-home" : "is-sub"}">
+<a class="skip" href="#main">Lewati ke konten utama</a>
+<div class="cursor" aria-hidden="true"><span class="cursor__label"></span></div>
+
+<header class="nav" id="nav">
+  <a class="nav__brand" href="${HOME ? "#top" : u("")}" aria-label="Wellness Gym, ${HOME ? "ke atas" : "ke beranda"}">${logo("nav__logo")}<span>Wellness Gym</span></a>
+  <nav class="nav__links" aria-label="Navigasi utama">${navLinks(p.key)}</nav>
+  ${waBtn(site.waGeneralMessage, "Chat WhatsApp", "gold btn--sm nav__cta")}
+  <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="menu"><span class="nav__toggle-text">Menu</span></button>
+</header>
+<nav class="menu" id="menu" aria-label="Navigasi mobile" hidden>
+  <div class="menu__links">${navLinks(p.key)}</div>
+  ${waBtn(site.waGeneralMessage)}
+  <p class="menu__meta">${esc(b.address)}</p>
+</nav>
+
+<main id="main">
+${body}
 </main>
 
 <footer class="footer">
@@ -408,7 +562,7 @@ const html = `<!DOCTYPE html>
       <p class="footer__tag">${esc(b.tagline)}</p>
       <address>${esc(b.address)}</address>
     </div>
-    <nav aria-label="Navigasi footer" class="footer__nav">${navLinks}</nav>
+    <nav aria-label="Navigasi footer" class="footer__nav">${navLinks(p.key)}</nav>
     <ul class="footer__social">
       <li><a href="${esc(waLink(site.waGeneralMessage))}" ${ext}>WhatsApp ${esc(b.whatsappDisplay)}</a></li>
       <li><a href="${b.instagramUrl}" ${ext}>Instagram ${esc(b.instagram)}</a></li>
@@ -419,48 +573,70 @@ const html = `<!DOCTYPE html>
 </footer>
 
 <div class="dock" aria-label="Aksi cepat">
-  ${btn("#membership", "Membership", "line")}
+  ${btn(membershipHref(), "Membership", "line")}
   ${waBtn(site.waGeneralMessage)}
 </div>
 </body>
 </html>
 `;
+}
+
+// ---------- Build all pages ----------
+const out = {};
+for (const p of pages) {
+  HOME = p.key === "home";
+  REL = p.path ? "../" : "";
+  if (p.key !== "home" && p.desc.length > 165) throw new Error(`Description too long (${p.desc.length}) on ${p.key}`);
+  const body = HOME ? homeBody() : pageHead(p) + p.body() + related(p) + finalSec();
+  out[p.key] = layout(p, body);
+  if (p.path) mkdirSync(here(p.path), { recursive: true });
+  writeFileSync(here(p.path + "index.html"), out[p.key]);
+}
+HOME = true; REL = "";
+const all = Object.values(out).join("\n");
 
 // Self-check: every business value from data must land in the output, links must be well-formed.
 const must = [
   site.hero.headline.split(" ").pop(),
   ...site.quickInfo.flatMap((q) => [q.value, q.label]),
-  ...site.membership.single.flatMap((m) => [m.oneMonth, m.threeMonth]),
-  ...site.membership.couple.map((c) => c.price), site.visitGym.price,
+  ...m.single.flatMap((x) => [x.oneMonth, x.threeMonth]),
+  ...m.couple.map((c) => c.price), site.visitGym.price,
   ...site.classes.map((c) => c.price),
   ...site.schedule.flatMap((s) => [s.time, s.cls]),
-  ...site.personalTrainer.tiers.flatMap((t) => t.rows.flatMap((r) => r.prices)),
+  ...ptTiers.flatMap((t) => t.rows.flatMap((r) => r.prices)),
   ...site.socialProof.testimonials.map((t) => t.text), site.finalCta.contact
 ].map(esc);
-const missing = must.filter((s) => !html.includes(s));
-if (missing.length) throw new Error("Missing in output: " + missing.join(" | "));
-for (const m of html.matchAll(/href="(https:\/\/wa\.me[^"]*)"/g)) {
-  if (!m[1].startsWith(`https://wa.me/${b.whatsappNumber}?text=`)) throw new Error("Bad WA link: " + m[1]);
+const missing = must.filter((s) => !out.home.includes(s));
+if (missing.length) throw new Error("Missing on home: " + missing.join(" | "));
+for (const mm of all.matchAll(/href="(https:\/\/wa\.me[^"]*)"/g)) {
+  if (!mm[1].startsWith(`https://wa.me/${b.whatsappNumber}?text=`)) throw new Error("Bad WA link: " + mm[1]);
 }
-if (!html.includes(`href="${site.ptBookingUrl}"`)) throw new Error("PT booking link missing");
-for (const m of html.matchAll(/src="(assets\/[^"]+)"/g)) if (!existsSync(here(m[1]))) throw new Error("Missing asset: " + m[1]);
-
-writeFileSync(here("index.html"), html);
-console.log("index.html written,", html.length, "bytes,", must.length, "values verified,");
+for (const k of ["home", "personal-trainer"]) if (!out[k].includes(`href="${site.ptBookingUrl}"`)) throw new Error("PT booking link missing on " + k);
+for (const mm of all.matchAll(/src="(?:\.\.\/)?(assets\/[^"]+)"/g)) if (!existsSync(here(mm[1]))) throw new Error("Missing asset: " + mm[1]);
+// Internal links must resolve to a generated page
+const known = new Set(["", ...pages.map((p) => p.path)]);
+for (const [k, html] of Object.entries(out)) {
+  for (const mm of html.matchAll(/<a [^>]*href="((?:\.\.\/)?(?:[a-z-]+\/)?)"/g)) {
+    const target = mm[1].replace(/^\.\.\//, "");
+    if (!known.has(target)) throw new Error(`Broken internal link "${mm[1]}" on ${k}`);
+  }
+}
 
 // ---------- Generated crawler/PWA files ----------
 const base = new URL(site.url).pathname;
 const today = new Date().toISOString().slice(0, 10);
-const imgUrls = [...new Set([site.hero.photo, ...site.whyPhotos, ...site.ribbon, site.classesPhoto, ...site.facilities.map((f) => f.photo).filter(Boolean)])];
+const homeImgs = [...new Set([site.hero.photo, ...site.whyPhotos, ...site.ribbon, site.classesPhoto, ...site.facilities.map((f) => f.photo).filter(Boolean)])];
+const imgTags = (keys) => keys.map((k) => `    <image:image><image:loc>${site.url}${P[k].src}</image:loc><image:caption>${esc(P[k].alt)}</image:caption></image:image>`).join("\n");
+const imgKeys = (p) => (p.key === "home" ? homeImgs : (p.images || []).map((i) => (P[i] ? i : site[i])));
 writeFileSync(here("sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-  <url>
-    <loc>${site.url}</loc>
+${pages.map((p) => `  <url>
+    <loc>${pageUrl(p)}</loc>
     <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-${imgUrls.map((k) => `    <image:image><image:loc>${site.url}${P[k].src}</image:loc><image:caption>${esc(P[k].alt)}</image:caption></image:image>`).join("\n")}
-  </url>
+    <changefreq>${p.key === "home" || p.key === "kelas" ? "weekly" : "monthly"}</changefreq>
+    <priority>${p.key === "home" ? "1.0" : p.key === "faq" ? "0.6" : "0.8"}</priority>
+${imgTags(imgKeys(p))}
+  </url>`).join("\n")}
 </urlset>
 `);
 
@@ -487,7 +663,10 @@ writeFileSync(here("llms.txt"), `# ${b.name} Purwokerto
 
 > ${site.seo.description}
 
-${b.name} (${b.tagline}) adalah gym di Purwokerto Utara, Kabupaten Banyumas, Jawa Tengah. Halaman utama: ${site.url}
+${b.name} (${b.tagline}) adalah gym di Purwokerto Utara, Kabupaten Banyumas, Jawa Tengah.
+
+## Halaman
+${pages.map((p) => `- [${p.nav || "Beranda"}](${pageUrl(p)}): ${p.key === "home" ? "Ringkasan gym, harga, jadwal, dan lokasi" : p.short}`).join("\n")}
 
 ## Informasi utama
 - Alamat: ${b.address}
@@ -509,7 +688,7 @@ ${site.scheduleNote}
 ${site.facilities.map((f) => `- ${f.name}`).join("\n")}
 
 ## Tanya jawab
-${faqs.map(([q, a]) => `### ${q}\n${a}`).join("\n\n")}
+${faqs.map((f) => `### ${f.q}\n${f.a}`).join("\n\n")}
 `);
 
 writeFileSync(here("404.html"), `<!DOCTYPE html>
@@ -550,4 +729,6 @@ writeFileSync(here("site.webmanifest"), JSON.stringify({
     { src: "apple-touch-icon.png", sizes: "180x180", type: "image/png" }
   ]
 }, null, 2) + "\n");
-console.log("sitemap, robots, llms.txt, 404, manifest written;", faqs.length, "FAQs,", offers.length, "offers");
+
+console.log(`${pages.length} pages, ${faqs.length} FAQs, ${offers.length} offers, ${must.length} values verified`);
+for (const p of pages) console.log(`  /${p.path}  title ${p.title.length}c  desc ${p.desc.length}c  faqs ${p.key === "home" ? 0 : faqsFor(p.key).length}`);

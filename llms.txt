@@ -2,7 +2,16 @@
 
 > Wellness Gym Purwokerto menyediakan membership gym, berbagai kelas olahraga, fasilitas gym, dan Personal Trainer. Temukan harga, jadwal kelas, lokasi, dan hubungi kami.
 
-Wellness Gym (Health · Strength · Balance) adalah gym di Purwokerto Utara, Kabupaten Banyumas, Jawa Tengah. Halaman utama: https://xnk-zan.github.io/wellness-gym/
+Wellness Gym (Health · Strength · Balance) adalah gym di Purwokerto Utara, Kabupaten Banyumas, Jawa Tengah.
+
+## Halaman
+- [Beranda](https://xnk-zan.github.io/wellness-gym/): Ringkasan gym, harga, jadwal, dan lokasi
+- [Membership](https://xnk-zan.github.io/wellness-gym/membership/): General, Student, Couple, dan visit gym Rp25.000 / visit
+- [Kelas](https://xnk-zan.github.io/wellness-gym/kelas/): Aerobic, BL Power, BL Twerking, Zumba, Yoga dan jadwal mingguan
+- [Personal Trainer](https://xnk-zan.github.io/wellness-gym/personal-trainer/): Paket Entry, Core, Premium, booking online
+- [Fasilitas](https://xnk-zan.github.io/wellness-gym/fasilitas/): Gym Equipment, Instruktur Gym, Locker, WiFi, Shower, Personal Trainer
+- [Lokasi](https://xnk-zan.github.io/wellness-gym/lokasi/): Jl. Jatisari No.24, Purwokerto Utara. Senin–Sabtu 06.00–21.00, Minggu 06.00–12.00
+- [FAQ](https://xnk-zan.github.io/wellness-gym/faq/): Harga, jadwal, Personal Trainer, jam buka, lokasi
 
 ## Informasi utama
 - Alamat: Jl. Jatisari No.24, Karangmiri, Sumampir, Kec. Purwokerto Utara, Kab. Banyumas, Jawa Tengah 53125
@@ -61,23 +70,38 @@ Jadwal kelas dapat berubah. Hubungi Wellness Gym untuk jadwal terbaru.
 ### Berapa harga membership Wellness Gym Purwokerto?
 Membership General Rp130.000 untuk 1 bulan dan Rp350.000 untuk 3 bulan. Membership Student Rp100.000 untuk 1 bulan dan Rp280.000 untuk 3 bulan. Paket couple: Mahasiswa Couple Rp190.000/bulan dan Umum Couple Rp250.000/bulan.
 
+### Apakah ada harga khusus mahasiswa?
+Ada. Membership Student Rp100.000 untuk 1 bulan dan Rp280.000 untuk 3 bulan, paket Mahasiswa Couple Rp190.000/bulan, dan Personal Trainer segmen Mahasiswa mulai Rp250.000 (ENTRY 4 sesi).
+
 ### Berapa harga visit gym harian?
 Visit gym Rp25.000 / visit. Kamu tidak harus langsung mengambil membership. Datang dan rasakan sendiri suasana Wellness Gym. Untuk ketentuan visit, tanyakan lewat WhatsApp 0852-1872-4659.
+
+### Kelas apa saja yang ada dan berapa harganya?
+Aerobic / BL Power Rp15.000 / kedatangan; BL Twerking Rp20.000 / kedatangan; Zumba Rp25.000 / kedatangan; Yoga Rp35.000 / kedatangan.
+
+### Bagaimana jadwal kelas mingguan?
+Senin 08.15 Zumba, 16.30 Aerobic Pemula; Selasa 08.00 BL Twerking, 16.30 Yoga, 18.30 BL Power; Rabu 09.00 Linedance, 16.30 Aero Advance; Kamis 08.15 Aerobic Pemula, 16.30 Zumba; Jumat 16.30 BL Power Exercise; Sabtu 15.15 Yoga, 16.30 Aerobic Advance. Jadwal kelas dapat berubah. Hubungi Wellness Gym untuk jadwal terbaru.
+
+### Apakah ada Personal Trainer di Wellness Gym?
+Ada. Paket ENTRY (hanya sesi), CORE (paket pelatihan), PREMIUM (pelatihan penuh), harga mulai Rp250.000. Tersedia untuk segmen mahasiswa dan umum.
+
+### Bagaimana cara booking Personal Trainer?
+Booking lewat xnkbooking.my.id. Untuk konsultasi paket yang sesuai, hubungi WhatsApp 0852-1872-4659.
+
+### Apa beda paket Entry, Core, dan Premium?
+ENTRY (hanya sesi): pendampingan latihan, koreksi teknik, penjelasan gerakan. CORE (paket pelatihan): program terstruktur, pendampingan latihan, tracking progres & beban, evaluasi tubuh dasar. PREMIUM (pelatihan penuh): semua fitur core, pendampingan prioritas, dukungan whatsapp/video, penyesuaian progres lebih cepat.
+
+### Fasilitas apa saja yang tersedia?
+Gym Equipment, Free Instruktur Gym, Locker, Free WiFi, Shower, Tersedia Personal Trainer.
+
+### Apakah ada instruktur gym?
+Ada. Instruktur gym dan personal trainer tersedia. Free Instruktur Gym termasuk dalam fasilitas.
 
 ### Jam buka Wellness Gym kapan?
 Senin–Sabtu pukul 06.00–21.00, Minggu pukul 06.00–12.00.
 
 ### Di mana lokasi Wellness Gym?
 Jl. Jatisari No.24, Karangmiri, Sumampir, Kec. Purwokerto Utara, Kab. Banyumas, Jawa Tengah 53125. Gym ini berada di Purwokerto Utara, Kabupaten Banyumas.
-
-### Kelas apa saja yang ada dan berapa harganya?
-Aerobic / BL Power Rp15.000 / kedatangan; BL Twerking Rp20.000 / kedatangan; Zumba Rp25.000 / kedatangan; Yoga Rp35.000 / kedatangan. Jadwal mingguan: Senin 08.15 Zumba, 16.30 Aerobic Pemula; Selasa 08.00 BL Twerking, 16.30 Yoga, 18.30 BL Power; Rabu 09.00 Linedance, 16.30 Aero Advance; Kamis 08.15 Aerobic Pemula, 16.30 Zumba; Jumat 16.30 BL Power Exercise; Sabtu 15.15 Yoga, 16.30 Aerobic Advance. Jadwal kelas dapat berubah. Hubungi Wellness Gym untuk jadwal terbaru.
-
-### Apakah ada Personal Trainer di Wellness Gym?
-Ada. Paket ENTRY (hanya sesi), CORE (paket pelatihan), PREMIUM (pelatihan penuh), harga mulai Rp250.000 untuk 4 sesi segmen mahasiswa. Booking Personal Trainer lewat xnkbooking.my.id.
-
-### Fasilitas apa saja yang tersedia?
-Gym Equipment, Free Instruktur Gym, Locker, Free WiFi, Shower, Tersedia Personal Trainer.
 
 ### Bagaimana ulasan Wellness Gym?
 Rating 4.9/5 · 17 Google Reviews.

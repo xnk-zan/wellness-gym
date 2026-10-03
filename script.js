@@ -38,7 +38,7 @@
   // Tap-to-copy address
   var copyBtn = $(".copy");
   var toast = $(".toast");
-  copyBtn.addEventListener("click", function () {
+  if (copyBtn) copyBtn.addEventListener("click", function () {
     var text = copyBtn.dataset.copy;
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(function () {
@@ -53,15 +53,16 @@
   // Mobile dock + solid nav once past the hero
   var dock = $(".dock");
   var hero = $("#top");
-  if ("IntersectionObserver" in window) {
+  if (hero && "IntersectionObserver" in window) {
     new IntersectionObserver(function (entries) {
       var past = !entries[0].isIntersecting;
       dock.classList.toggle("is-visible", past);
     }, { threshold: 0.05 }).observe(hero);
-  } else {
-    dock.classList.add("is-visible");
   }
-  function solidNav() { nav.classList.toggle("is-solid", window.scrollY > 40); }
+  function solidNav() {
+    nav.classList.toggle("is-solid", window.scrollY > 40);
+    if (!hero) dock.classList.toggle("is-visible", window.scrollY > 420);
+  }
   window.addEventListener("scroll", solidNav, { passive: true });
   solidNav();
 
@@ -108,8 +109,9 @@
   }
 
   // Active nav link
-  $$(".nav__links a").forEach(function (a) {
-    var sec = $(a.getAttribute("href"));
+  var spy = { "membership/": "#membership", "kelas/": "#classes", "personal-trainer/": "#personal-trainer", "fasilitas/": "#facilities", "lokasi/": "#location" };
+  if (hero) $$(".nav__links a").forEach(function (a) {
+    var sec = $(spy[a.getAttribute("href")] || "#none");
     if (!sec) return;
     ScrollTrigger.create({
       trigger: sec, start: "top 45%", end: "bottom 45%",
@@ -122,6 +124,7 @@
   /* ---------- Why: pinned horizontal scroll on desktop ---------- */
   mm.add("(min-width: 1024px) and (prefers-reduced-motion: no-preference)", function () {
     var why = $(".why");
+    if (!why) return;
     var track = $(".why__track");
     why.classList.add("is-horizontal");
     var title = $(".why__title");
@@ -136,6 +139,7 @@
   });
 
   mm.add("(max-width: 1023px) and (prefers-reduced-motion: no-preference)", function () {
+    if (!$(".why__track")) return;
     gsap.from(".why__card", {
       y: 60, opacity: 0, duration: 1, stagger: .1, ease: "expo.out",
       scrollTrigger: { trigger: ".why__track", start: "top 85%" }
@@ -144,8 +148,12 @@
 
   mm.add("(prefers-reduced-motion: no-preference)", function () {
     var expo = "expo.out";
+    // Guarded tweens: pages share one script but not every page has every section.
+    var from = function (sel, vars) { if ($(sel)) gsap.from(sel, vars); };
+    var fromTo = function (sel, a, c) { if ($(sel)) gsap.fromTo(sel, a, c); };
 
     /* ---------- Loader + hero intro ---------- */
+    if (hero) {
     // Loader plays once per browser session; returning visitors go straight to the hero reveal.
     var seen = false;
     try { seen = !!sessionStorage.getItem("wg-seen"); sessionStorage.setItem("wg-seen", "1"); } catch (e) {}
@@ -197,6 +205,11 @@
       scrollTrigger: { trigger: hero, start: "40% top", end: "bottom top", scrub: true }
     });
 
+    } else {
+      doc.classList.remove("pending");
+      from(".phead__in > :not(h1)", { y: 24, opacity: 0, duration: 1, stagger: .08, delay: .35, ease: expo });
+    }
+
     // Nav hides on scroll down, returns on scroll up
     ScrollTrigger.create({
       start: 200, end: "max",
@@ -214,31 +227,30 @@
     });
     // Photo ribbon joins the same velocity-driven loop
     var ribbon = $(".ribbon");
-    var rTrack = $(".ribbon__track");
-    ribbon.classList.add("is-looping");
-    ribbon.scrollLeft = 0;
-    ribbon.appendChild(rTrack.cloneNode(true)).setAttribute("aria-hidden", "true");
-    loops.push(gsap.fromTo(ribbon.children, { xPercent: 0 }, { xPercent: -100, duration: 45, ease: "none", repeat: -1 }));
-    var skew = gsap.quickTo(".ribbon__item", "skewX", { duration: .5, ease: "power3.out" });
+    var skew = null;
+    if (ribbon) {
+      ribbon.classList.add("is-looping");
+      ribbon.scrollLeft = 0;
+      ribbon.appendChild($(".ribbon__track").cloneNode(true)).setAttribute("aria-hidden", "true");
+      loops.push(gsap.fromTo(ribbon.children, { xPercent: 0 }, { xPercent: -100, duration: 45, ease: "none", repeat: -1 }));
+      skew = gsap.quickTo(".ribbon__item", "skewX", { duration: .5, ease: "power3.out" });
+    }
 
     var boost = { v: 1 };
-    ScrollTrigger.create({
+    var setBoost = function () { loops.forEach(function (l) { l.timeScale(boost.v); }); };
+    if (loops.length) ScrollTrigger.create({
       start: 0, end: "max",
       onUpdate: function (self) {
         var v = gsap.utils.clamp(-6, 6, self.getVelocity() / 300);
         var dir = self.direction;
-        skew(gsap.utils.clamp(-8, 8, -v * 2));
-        gsap.delayedCall(.3, function () { skew(0); });
-        gsap.to(boost, {
-          v: (Math.abs(v) + 1) * dir, duration: .25, overwrite: true,
-          onUpdate: function () { loops.forEach(function (l) { l.timeScale(boost.v); }); }
-        });
-        gsap.to(boost, { v: dir, duration: 1.2, delay: .25, ease: "power2.out", onUpdate: function () { loops.forEach(function (l) { l.timeScale(boost.v); }); } });
+        if (skew) { skew(gsap.utils.clamp(-8, 8, -v * 2)); gsap.delayedCall(.3, function () { skew(0); }); }
+        gsap.to(boost, { v: (Math.abs(v) + 1) * dir, duration: .25, overwrite: true, onUpdate: setBoost });
+        gsap.to(boost, { v: dir, duration: 1.2, delay: .25, ease: "power2.out", onUpdate: setBoost });
       }
     });
 
     /* ---------- Quick info ---------- */
-    gsap.from(".quick__item", {
+    from(".quick__item", {
       y: 40, opacity: 0, duration: 1, stagger: .08, ease: expo,
       scrollTrigger: { trigger: ".quick", start: "top 85%" }
     });
@@ -277,7 +289,7 @@
     });
 
     /* ---------- Membership tiles ---------- */
-    gsap.from(".tile", {
+    from(".tile", {
       clipPath: "inset(100% 0% 0% 0%)", duration: 1.2, stagger: .1, ease: "expo.inOut",
       scrollTrigger: { trigger: ".bento", start: "top 80%" }
     });
@@ -291,29 +303,29 @@
     });
 
     /* ---------- Classes banner: reveal + parallax ---------- */
-    gsap.from(".classes__banner", {
+    from(".classes__banner", {
       clipPath: "inset(0% 50% 0% 50%)", duration: 1.4, ease: "expo.inOut",
       scrollTrigger: { trigger: ".classes__banner", start: "top 85%" }
     });
-    gsap.fromTo(".classes__img", { yPercent: -15 }, {
+    fromTo(".classes__img", { yPercent: -15 }, {
       yPercent: 0, ease: "none",
       scrollTrigger: { trigger: ".classes__banner", start: "top bottom", end: "bottom top", scrub: true }
     });
 
     /* ---------- Classes rows ---------- */
-    gsap.from(".class-row", {
+    from(".class-row", {
       x: -80, opacity: 0, duration: 1.1, stagger: .08, ease: expo,
       scrollTrigger: { trigger: ".classes", start: "top 80%" }
     });
 
     /* ---------- FAQ ---------- */
-    gsap.from(".faq__item", {
+    from(".faq__item", {
       y: 40, opacity: 0, duration: 1, stagger: .06, ease: expo,
       scrollTrigger: { trigger: ".faq__list", start: "top 85%" }
     });
 
     /* ---------- Week grid ---------- */
-    gsap.from(".week__day", {
+    from(".week__day", {
       y: 50, opacity: 0, duration: .9, stagger: .06, ease: expo,
       scrollTrigger: { trigger: ".week", start: "top 85%" }
     });
@@ -328,19 +340,19 @@
         scrollTrigger: { trigger: next, start: "top 70%", end: function () { return "top " + parseFloat(getComputedStyle(next).top) + "px"; }, scrub: true, invalidateOnRefresh: true }
       });
     });
-    gsap.from(".spin", {
+    from(".spin", {
       scale: 0, rotate: -120, duration: 1.4, ease: "back.out(1.6)",
       scrollTrigger: { trigger: ".pt", start: "top 75%" }
     });
 
     /* ---------- Reviews wall ---------- */
-    gsap.from(".wall__item", {
+    from(".wall__item", {
       y: 90, opacity: 0, duration: 1.2, stagger: .12, ease: expo,
       scrollTrigger: { trigger: ".wall", start: "top 85%" }
     });
 
     /* ---------- Location ---------- */
-    gsap.from(".loc__info > *:not(h2), .loc__map", {
+    from(".loc__info > *:not(h2), .loc__map", {
       y: 40, opacity: 0, duration: 1, stagger: .07, ease: expo,
       scrollTrigger: { trigger: ".loc", start: "top 78%" }
     });
@@ -352,13 +364,13 @@
       yPercent: 110, duration: 1.3, stagger: .12, ease: expo,
       scrollTrigger: { trigger: finalTitle, start: "top 80%" }
     });
-    gsap.from(".final__copy, .final .hero__ctas > *, .final__contact", {
+    from(".final__copy, .final .hero__ctas > *, .final__contact", {
       y: 30, opacity: 0, duration: 1, stagger: .08, ease: expo,
       scrollTrigger: { trigger: ".final__copy", start: "top 90%" }
     });
 
     /* ---------- Footer wordmark rises with scroll ---------- */
-    gsap.from(".footer__word", {
+    from(".footer__word", {
       yPercent: 70, ease: "none",
       scrollTrigger: { trigger: ".footer", start: "top bottom", end: "bottom bottom", scrub: true }
     });
@@ -379,7 +391,7 @@
       });
     }
 
-    return function () { loader.remove(); };
+    return function () { if (loader) loader.remove(); };
   });
 
   /* ---------- Cursor with contextual label ---------- */

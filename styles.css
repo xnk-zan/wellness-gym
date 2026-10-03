@@ -502,3 +502,35 @@ address { font-style: normal; max-width: 26rem; }
   .faq__item::details-content { block-size: 0; overflow: clip; transition: block-size .5s var(--ease), content-visibility .5s allow-discrete; }
   .faq__item[open]::details-content { block-size: auto; }
 }
+
+/* ---------- Sub pages ---------- */
+.nav__links { gap: 1.4rem; }
+.nav__links a[aria-current="page"] { color: var(--cream); }
+.nav__links a[aria-current="page"]::after { transform: scaleX(1); transform-origin: left; }
+.phead { max-width: var(--max); margin: 0 auto; padding: clamp(8rem, 16vw, 12rem) var(--gutter) 0; }
+.phead__in { display: grid; gap: 1.5rem; justify-items: start; }
+.phead__title { font: 600 clamp(3rem, 8.4vw, 8.5rem)/.92 var(--display); letter-spacing: -.045em; max-width: 16ch; text-wrap: balance; }
+.phead__intro { color: rgba(239, 233, 221, .78); max-width: 46rem; font-size: clamp(1.05rem, 1.4vw, 1.25rem); text-wrap: pretty; }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; font: 500 .78rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.crumbs a { text-decoration: none; padding: .75rem 0; }
+.crumbs a:hover { color: var(--led); }
+.crumbs [aria-current] { color: var(--led); }
+.phead + .sec { padding-top: clamp(3rem, 6vw, 5rem); }
+.is-sub .sec__head { margin-bottom: clamp(2rem, 4vw, 3.5rem); }
+.is-sub .sec__title { font-size: clamp(2.2rem, 5vw, 4.5rem); }
+.sec__aside { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; }
+.more { font: 500 .8rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--led); text-decoration: none; padding: .75rem 0; border-bottom: 1px solid transparent; transition: border-color .3s; }
+.more::after { content: " \2192"; }
+.more:hover { border-color: var(--led); }
+.loc__info > .more { justify-self: start; margin-top: -1rem; }
+.rel__title { font: 500 .8rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.5rem; }
+.rel { border-top: 1px solid var(--line); }
+.rel a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .25rem 1.5rem; padding: clamp(1.25rem, 2.4vw, 2rem) 0; border-bottom: 1px solid var(--line); text-decoration: none; transition: padding .5s var(--ease), color .3s; }
+.rel a:hover { padding-inline: 1rem; color: var(--led); }
+.rel__name { font: 600 clamp(1.6rem, 3.6vw, 3.2rem)/1 var(--display); letter-spacing: -.035em; }
+.rel__desc { grid-column: 1; color: var(--muted); font-size: .95rem; }
+.rel .ico-arrow { grid-column: 2; grid-row: 1 / span 2; width: 1.6rem; height: 1.6rem; }
+.is-sub .faq { padding-top: clamp(4rem, 8vw, 7rem); }
+.is-sub .final { padding-top: clamp(5rem, 9vw, 8rem); }
+.is-sub .final__title { font-size: clamp(2.8rem, 8.5vw, 8rem); }
+.is-sub .classes__banner { margin-top: 0; }
